@@ -16,15 +16,24 @@ const authUsuario = async (req, res) => {
         const { email, senha } = req.body;
 
         // Verificar se o usuário existe
-        const usuario = await Usuario.findOne({ email });
+        // Adicionando timeout explícito para a operação findOne
+        const usuario = await Usuario.findOne({ email }).maxTimeMS(15000); // 15 segundos de timeout
 
         if (usuario && (await usuario.matchPassword(senha))) {
+            // Verificar se a conta está verificada como funcionário
+            if (!usuario.verificado) {
+                return res.status(401).json({
+                    message: 'Conta não verificada. Entre em contato com o administrador.'
+                });
+            }
+
             res.json({
                 _id: usuario._id,
                 nome: usuario.nome,
                 email: usuario.email,
                 cargo: usuario.cargo,
                 setor: usuario.setor,
+                verificado: usuario.verificado,
                 isAdmin: usuario.isAdmin,
                 token: generateToken(usuario._id)
             });
@@ -44,19 +53,21 @@ const registerUsuario = async (req, res) => {
         const { nome, email, senha, cargo, setor, isAdmin } = req.body;
 
         // Verificar se o usuário já existe
-        const usuarioExists = await Usuario.findOne({ email });
+        // Adicionando timeout explícito para a operação findOne
+        const usuarioExists = await Usuario.findOne({ email }).maxTimeMS(15000); // 15 segundos de timeout
 
         if (usuarioExists) {
             return res.status(400).json({ message: 'Usuário já existe' });
         }
 
-        // Criar novo usuário
+        // Criar novo usuário - agora incluindo o campo verificado como true porque passou pelo middleware de token
         const usuario = await Usuario.create({
             nome,
             email,
             senha,
             cargo,
             setor,
+            verificado: true,
             isAdmin: isAdmin || false
         });
 
@@ -67,6 +78,7 @@ const registerUsuario = async (req, res) => {
                 email: usuario.email,
                 cargo: usuario.cargo,
                 setor: usuario.setor,
+                verificado: usuario.verificado,
                 isAdmin: usuario.isAdmin,
                 token: generateToken(usuario._id)
             });

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import FormInput from "../components/FormInput";
-import Button from "../components/Button";
 import { useAuth } from "../contexts/AuthContext";
+import { FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
+import "../styles/Auth.css";
 
 const RedefinirSenhaPage = () => {
   const { token } = useParams();
@@ -10,6 +10,8 @@ const RedefinirSenhaPage = () => {
     senha: "",
     confirmarSenha: "",
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formErrors, setFormErrors] = useState({});
   const [tokenValid, setTokenValid] = useState(true);
   const [success, setSuccess] = useState(false);
@@ -72,19 +74,18 @@ const RedefinirSenhaPage = () => {
 
   if (!tokenValid) {
     return (
-      <div className="flex justify-center items-center min-h-[80vh]">
-        <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-          <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
-            Link Inválido
-          </h2>
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+      <div className="login-container">
+        <div className="login-logo">
+          <img src="/images/logo-bio-research.png" alt="Bio Research do Brasil Logo" className="logo-image" />
+        </div>
+
+        <div className="login-form">
+          <h2 className="form-title">Link Inválido</h2>
+          <div className="error-message">
             O link de redefinição de senha é inválido ou expirou.
           </div>
-          <div className="text-center mt-4">
-            <Link
-              to="/recuperar-senha"
-              className="text-blue-600 hover:text-blue-800 font-medium"
-            >
+          <div className="links-container">
+            <Link to="/recuperar-senha" className="forgot-password">
               Solicitar novo link
             </Link>
           </div>
@@ -94,62 +95,90 @@ const RedefinirSenhaPage = () => {
   }
 
   return (
-    <div className="flex justify-center items-center min-h-[80vh]">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
-          Redefinir Senha - BioCalib
-        </h2>
+    <div className="login-container">
+      <div className="login-logo">
+        <img src="/images/logo-bio-research.png" alt="Bio Research do Brasil Logo" className="logo-image" />
+      </div>
 
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
+      <div className="login-form">
+        <h2 className="form-title">Redefinir Senha</h2>
+
+        {error && <div className="error-message">{error}</div>}
 
         {success ? (
-          <div className="text-center">
-            <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+          <div>
+            <div className="success-message">
               Sua senha foi redefinida com sucesso!
             </div>
-            <p className="mb-4 text-gray-600">
+            <p className="form-description">
               Agora você pode fazer login com sua nova senha.
             </p>
-            <Button
-              variant="primary"
-              className="mt-2"
-              onClick={() => navigate("/login")}
-            >
-              Ir para Login
-            </Button>
+            <button className="login-button" onClick={() => navigate("/login")}>
+              IR PARA LOGIN
+            </button>
           </div>
         ) : (
           <>
-            <p className="mb-4 text-gray-600">
-              Digite sua nova senha abaixo para redefinir sua senha.
+            <p className="form-description">
+              Digite sua nova senha abaixo para redefinir seu acesso.
             </p>
 
-            <form onSubmit={handleSubmit}>
-              <FormInput
-                label="Nova Senha"
-                type="password"
-                id="senha"
-                value={formData.senha}
-                onChange={handleChange}
-                required
-                error={formErrors.senha}
-              />
+            <form onSubmit={handleSubmit} style={{ width: "100%" }}>
+              <div className="input-group">
+                <div className="input-wrapper">
+                  <FaLock className="input-icon" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="NOVA SENHA"
+                    id="senha"
+                    className="login-input with-icon"
+                    style={{ animationDelay: "0.1s" }}
+                    value={formData.senha}
+                    onChange={handleChange}
+                    required
+                  />
+                  <div
+                    className="toggle-password"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <FaEyeSlash /> : <FaEye />}
+                  </div>
+                  {formErrors.senha && (
+                    <div className="error-message">{formErrors.senha}</div>
+                  )}
+                </div>
+              </div>
 
-              <FormInput
-                label="Confirmar Nova Senha"
-                type="password"
-                id="confirmarSenha"
-                value={formData.confirmarSenha}
-                onChange={handleChange}
-                required
-                error={formErrors.confirmarSenha}
-              />
+              <div className="input-group">
+                <div className="input-wrapper">
+                  <FaLock className="input-icon" />
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="CONFIRMAR NOVA SENHA"
+                    id="confirmarSenha"
+                    className="login-input with-icon"
+                    style={{ animationDelay: "0.2s" }}
+                    value={formData.confirmarSenha}
+                    onChange={handleChange}
+                    required
+                  />
+                  <div
+                    className="toggle-password"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+                  </div>
+                  {formErrors.confirmarSenha && (
+                    <div className="error-message">
+                      {formErrors.confirmarSenha}
+                    </div>
+                  )}
+                </div>
+              </div>
 
-              <Button className="w-full mt-4">Redefinir Senha</Button>
+              <button type="submit" className="login-button">
+                REDEFINIR SENHA
+              </button>
             </form>
           </>
         )}

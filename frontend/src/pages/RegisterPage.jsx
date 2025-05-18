@@ -1,8 +1,17 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import FormInput from "../components/FormInput";
-import Button from "../components/Button";
 import { useAuth } from "../contexts/AuthContext";
+import {
+  FaUser,
+  FaLock,
+  FaEnvelope,
+  FaBuilding,
+  FaUsers,
+  FaKey,
+  FaEye,
+  FaEyeSlash,
+} from "react-icons/fa";
+import "../styles/Auth.css";
 
 const RegisterPage = () => {
   const [formData, setFormData] = useState({
@@ -12,7 +21,11 @@ const RegisterPage = () => {
     confirmarSenha: "",
     cargo: "",
     setor: "",
+    corporateToken: "",
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showToken, setShowToken] = useState(false);
   const [formErrors, setFormErrors] = useState({});
   const { register, error } = useAuth();
   const navigate = useNavigate();
@@ -35,6 +48,8 @@ const RegisterPage = () => {
       errors.confirmarSenha = "Confirmação de senha é obrigatória";
     if (!formData.cargo) errors.cargo = "Cargo é obrigatório";
     if (!formData.setor) errors.setor = "Setor é obrigatório";
+    if (!formData.corporateToken)
+      errors.corporateToken = "Token corporativo é obrigatório";
 
     // Validação de email
     if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
@@ -71,99 +86,188 @@ const RegisterPage = () => {
       navigate("/dashboard");
     } catch (err) {
       console.error("Erro no cadastro:", err);
-      // O erro global já é tratado pelo contexto de autenticação
     }
   };
 
   return (
-    <div className="flex justify-center items-center py-8">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
-          Cadastro - BioCalib
-        </h2>
+    <div className="login-container">
+      <div className="login-logo">
+        <img
+          src="/images/logo-bio-research.png"
+          alt="Bio Research do Brasil Logo"
+          className="logo-image"
+        />
+      </div>
 
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
+      <form onSubmit={handleSubmit} className="login-form">
+        <h2 className="form-title">Cadastro - BioOrbit</h2>
+        <p className="form-description">
+          Complete suas informações para criar sua conta
+        </p>
+
+        {error && <div className="error-message">{error}</div>}
+
+        <div className="input-group">
+          <div className="input-wrapper">
+            <FaUser className="input-icon" />
+            <input
+              type="text"
+              placeholder="NOME COMPLETO"
+              id="nome"
+              className="login-input with-icon"
+              style={{ animationDelay: "0.1s" }}
+              value={formData.nome}
+              onChange={handleChange}
+              required
+            />
+            {formErrors.nome && (
+              <div className="error-message">{formErrors.nome}</div>
+            )}
           </div>
-        )}
+        </div>
 
-        <form onSubmit={handleSubmit}>
-          <FormInput
-            label="Nome Completo"
-            id="nome"
-            value={formData.nome}
-            onChange={handleChange}
-            required
-            error={formErrors.nome}
-          />
+        <div className="input-group">
+          <div className="input-wrapper">
+            <FaEnvelope className="input-icon" />
+            <input
+              type="email"
+              placeholder="E-MAIL"
+              id="email"
+              className="login-input with-icon"
+              style={{ animationDelay: "0.2s" }}
+              value={formData.email}
+              onChange={handleChange}
+              required
+            />
+            {formErrors.email && (
+              <div className="error-message">{formErrors.email}</div>
+            )}
+          </div>
+        </div>
 
-          <FormInput
-            label="Email"
-            type="email"
-            id="email"
-            value={formData.email}
-            onChange={handleChange}
-            placeholder="seu@email.com"
-            required
-            error={formErrors.email}
-          />
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormInput
-              label="Cargo"
+        <div className="input-group">
+          <div className="input-wrapper">
+            <FaBuilding className="input-icon" />
+            <input
+              type="text"
+              placeholder="CARGO"
               id="cargo"
+              className="login-input with-icon"
+              style={{ animationDelay: "0.3s" }}
               value={formData.cargo}
               onChange={handleChange}
               required
-              error={formErrors.cargo}
             />
+            {formErrors.cargo && (
+              <div className="error-message">{formErrors.cargo}</div>
+            )}
+          </div>
+        </div>
 
-            <FormInput
-              label="Setor"
+        <div className="input-group">
+          <div className="input-wrapper">
+            <FaUsers className="input-icon" />
+            <input
+              type="text"
+              placeholder="SETOR"
               id="setor"
+              className="login-input with-icon"
+              style={{ animationDelay: "0.4s" }}
               value={formData.setor}
               onChange={handleChange}
               required
-              error={formErrors.setor}
             />
+            {formErrors.setor && (
+              <div className="error-message">{formErrors.setor}</div>
+            )}
           </div>
-
-          <FormInput
-            label="Senha"
-            type="password"
-            id="senha"
-            value={formData.senha}
-            onChange={handleChange}
-            required
-            error={formErrors.senha}
-          />
-
-          <FormInput
-            label="Confirmar Senha"
-            type="password"
-            id="confirmarSenha"
-            value={formData.confirmarSenha}
-            onChange={handleChange}
-            required
-            error={formErrors.confirmarSenha}
-          />
-
-          <Button className="w-full mt-4">Cadastrar</Button>
-        </form>
-
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
-            Já tem uma conta?{" "}
-            <Link
-              to="/login"
-              className="text-blue-600 hover:text-blue-800 font-medium"
-            >
-              Faça login
-            </Link>
-          </p>
         </div>
-      </div>
+
+        <div className="input-group">
+          <div className="input-wrapper">
+            <FaLock className="input-icon" />
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="SENHA"
+              id="senha"
+              className="login-input with-icon"
+              style={{ animationDelay: "0.5s" }}
+              value={formData.senha}
+              onChange={handleChange}
+              required
+            />
+            <div
+              className="toggle-password"
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? <FaEyeSlash /> : <FaEye />}
+            </div>
+            {formErrors.senha && (
+              <div className="error-message">{formErrors.senha}</div>
+            )}
+          </div>
+        </div>
+
+        <div className="input-group">
+          <div className="input-wrapper">
+            <FaLock className="input-icon" />
+            <input
+              type={showConfirmPassword ? "text" : "password"}
+              placeholder="CONFIRMAR SENHA"
+              id="confirmarSenha"
+              className="login-input with-icon"
+              style={{ animationDelay: "0.6s" }}
+              value={formData.confirmarSenha}
+              onChange={handleChange}
+              required
+            />
+            <div
+              className="toggle-password"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            >
+              {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+            </div>
+            {formErrors.confirmarSenha && (
+              <div className="error-message">{formErrors.confirmarSenha}</div>
+            )}
+          </div>
+        </div>
+
+        <div className="input-group">
+          <div className="input-wrapper">
+            <FaKey className="input-icon" />
+            <input
+              type={showToken ? "text" : "password"}
+              placeholder="TOKEN CORPORATIVO"
+              id="corporateToken"
+              className="login-input with-icon"
+              style={{ animationDelay: "0.7s" }}
+              value={formData.corporateToken}
+              onChange={handleChange}
+              required
+            />
+            <div
+              className="toggle-password"
+              onClick={() => setShowToken(!showToken)}
+            >
+              {showToken ? <FaEyeSlash /> : <FaEye />}
+            </div>
+            {formErrors.corporateToken && (
+              <div className="error-message">{formErrors.corporateToken}</div>
+            )}
+          </div>
+        </div>
+
+        <button type="submit" className="login-button">
+          CADASTRAR
+        </button>
+
+        <div className="links-container">
+          <Link to="/login" className="forgot-password">
+            Já tem uma conta? Faça login
+          </Link>
+        </div>
+      </form>
     </div>
   );
 };

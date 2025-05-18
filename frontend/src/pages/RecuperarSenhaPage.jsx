@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import FormInput from "../components/FormInput";
-import Button from "../components/Button";
 import { useAuth } from "../contexts/AuthContext";
+import { FaEnvelope, FaArrowLeft } from "react-icons/fa";
+import "../styles/Auth.css";
 
 const RecuperarSenhaPage = () => {
   const [email, setEmail] = useState("");
@@ -45,67 +45,65 @@ const RecuperarSenhaPage = () => {
   };
 
   return (
-    <div className="flex justify-center items-center min-h-[80vh]">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
-          Recuperação de Senha - BioCalib
-        </h2>
+    <div className="login-container">
+      <div className="login-logo">
+        <img src="/images/logo-bio-research.png" alt="Bio Research do Brasil Logo" className="logo-image" />
+      </div>
 
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
+      <div className="login-form">
+        <h2 className="form-title">Recuperação de Senha</h2>
+
+        {error && <div className="error-message">{error}</div>}
 
         {success ? (
-          <div className="text-center">
-            <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+          <div>
+            <div className="success-message">
               Um email com instruções para redefinir sua senha foi enviado para{" "}
               {email}.
             </div>
-            <p className="mb-4 text-gray-600">
+            <p className="form-description">
               Verifique sua caixa de entrada e siga as instruções no email.
             </p>
-            <Button
-              variant="secondary"
-              className="mt-2"
-              onClick={() => navigate("/login")}
-            >
-              Voltar para Login
-            </Button>
+            <button className="login-button" onClick={() => navigate("/login")}>
+              VOLTAR PARA LOGIN
+            </button>
           </div>
         ) : (
           <>
-            <p className="mb-4 text-gray-600">
+            <p className="form-description">
               Digite seu email abaixo e enviaremos instruções para redefinir sua
               senha.
             </p>
 
-            <form onSubmit={handleSubmit}>
-              <FormInput
-                label="Email"
-                type="email"
-                id="email"
-                value={email}
-                onChange={handleChange}
-                placeholder="seu@email.com"
-                required
-                error={emailError}
-              />
+            <form onSubmit={handleSubmit} style={{ width: "100%" }}>
+              <div className="input-group">
+                <div className="input-wrapper">
+                  <FaEnvelope className="input-icon" />
+                  <input
+                    type="email"
+                    placeholder="E-MAIL"
+                    id="email"
+                    className="login-input with-icon"
+                    style={{ animationDelay: "0.1s" }}
+                    value={email}
+                    onChange={handleChange}
+                    required
+                  />
+                  {emailError && (
+                    <div className="error-message">{emailError}</div>
+                  )}
+                </div>
+              </div>
 
-              <Button className="w-full mt-4">Enviar Instruções</Button>
+              <button type="submit" className="login-button">
+                ENVIAR INSTRUÇÕES
+              </button>
             </form>
 
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
-                Lembrou sua senha?{" "}
-                <Link
-                  to="/login"
-                  className="text-blue-600 hover:text-blue-800 font-medium"
-                >
-                  Voltar para Login
-                </Link>
-              </p>
+            <div className="links-container">
+              <Link to="/login" className="forgot-password">
+                Lembrou sua senha? Voltar para Login
+              </Link>
             </div>
           </>
         )}

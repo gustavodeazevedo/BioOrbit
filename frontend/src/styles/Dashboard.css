@@ -1,0 +1,243 @@
+.dashboard-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background-color: #f8f8f8;
+}
+
+.dashboard-panel {
+  width: 100%;
+  max-width: 900px;
+  background-color: white;
+  padding: 2rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  opacity: 0;
+  animation: fadeInUp 0.5s ease-out forwards;
+}
+
+.dashboard-header {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.dashboard-title {
+  color: #0b6200;
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  opacity: 0;
+  animation: fadeInUp 0.5s ease-out 0.1s forwards;
+}
+
+.dashboard-welcome {
+  color: #0b6200;
+  font-size: 1rem;
+  opacity: 0;
+  animation: fadeInUp 0.5s ease-out 0.2s forwards;
+}
+
+.user-info {
+  background-color: #f8f8f8;
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+  margin-bottom: 2rem;
+  opacity: 0;
+  animation: fadeInUp 0.5s ease-out 0.3s forwards;
+}
+
+.user-info-title {
+  color: #0b6200;
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #d1d5db;
+}
+
+.user-info-row {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.user-info-label {
+  font-weight: 600;
+  color: #0b6200;
+  width: 120px;
+}
+
+.user-info-value {
+  color: #4b5563;
+  flex: 1;
+}
+
+.dashboard-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  opacity: 0;
+  animation: fadeInUp 0.5s ease-out 0.4s forwards;
+}
+
+.dashboard-section {
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dashboard-section:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-section.equipment {
+  background-color: #edf7ed;
+  border-color: #a5d6a7;
+}
+
+.dashboard-section.calibration {
+  background-color: #e8f5e9;
+  border-color: #81c784;
+}
+
+.dashboard-section.admin {
+  background-color: #f3e5f5;
+  border-color: #ce93d8;
+}
+
+.section-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.equipment .section-title {
+  color: #2e7d32;
+}
+
+.calibration .section-title {
+  color: #2e7d32;
+}
+
+.admin .section-title {
+  color: #6a1b9a;
+}
+
+.section-description {
+  font-size: 0.9rem;
+  color: #4b5563;
+  margin-bottom: 1rem;
+}
+
+.dashboard-button {
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s ease;
+  border: none;
+  display: inline-block;
+}
+
+.dashboard-button.equipment-btn {
+  background-color: #a5d6a7;
+  color: #0b6200;
+}
+
+.dashboard-button.equipment-btn:hover {
+  background-color: #81c784;
+  transform: translateY(-2px);
+}
+
+.dashboard-button.calibration-btn {
+  background-color: #a5d6a7;
+  color: #0b6200;
+}
+
+.dashboard-button.calibration-btn:hover {
+  background-color: #81c784;
+  transform: translateY(-2px);
+}
+
+/* Seção de Clientes */
+.dashboard-section.clients {
+  background-color: #e8f5e9;
+  border-color: #81c784;
+}
+
+.clients .section-title {
+  color: #2e7d32;
+}
+
+.dashboard-button.clients-btn {
+  background-color: #a5d6a7;
+  color: #0b6200;
+}
+
+.dashboard-button.clients-btn:hover {
+  background-color: #81c784;
+  transform: translateY(-2px);
+}
+
+/* codificando */
+
+.dashboard-button.admin-btn {
+  background-color: #ce93d8;
+  color: #6a1b9a;
+}
+
+.dashboard-button.admin-btn:hover {
+  background-color: #ba68c8;
+  transform: translateY(-2px);
+}
+
+.dashboard-footer {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  text-align: right;
+  opacity: 0;
+  animation: fadeInUp 0.5s ease-out 0.5s forwards;
+}
+
+.logout-button {
+  padding: 0.5rem 1rem;
+  background-color: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 0.25rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.logout-button:hover {
+  background-color: #dc2626;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (min-width: 768px) {
+  .dashboard-sections {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+}

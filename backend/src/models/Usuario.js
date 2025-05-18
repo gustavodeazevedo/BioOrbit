@@ -23,6 +23,11 @@ const usuarioSchema = mongoose.Schema({
         type: String,
         required: true
     },
+    verificado: {
+        type: Boolean,
+        required: true,
+        default: false
+    },
     isAdmin: {
         type: Boolean,
         required: true,
