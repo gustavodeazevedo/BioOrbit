@@ -266,7 +266,7 @@
   padding: 1.5rem;
   border-radius: 1rem;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-  margin-bottom: 2rem;
+  margin-bottom: 3.5rem;
   border-left: 4px solid #0b6200;
   opacity: 0;
   animation: fadeInUp 0.5s ease-out 0.3s forwards;
@@ -336,10 +336,39 @@
 /* Cards de seção */
 .dashboard-sections {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2.5rem;
   opacity: 0;
   animation: fadeInUp 0.5s ease-out 0.4s forwards;
+  padding: 0.5rem;
+  justify-items: center;
+}
+
+/* Linha divisória entre seções */
+.section-divider {
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    rgba(11, 98, 0, 0.05),
+    rgba(11, 98, 0, 0.5),
+    rgba(11, 98, 0, 0.05)
+  );
+  margin: 0.5rem 0 3rem;
+  position: relative;
+  box-shadow: 0 1px 3px rgba(11, 98, 0, 0.1);
+}
+
+.section-divider::before {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #0b6200;
+  border-radius: 50%;
+  top: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  box-shadow: 0 0 0 3px rgba(11, 98, 0, 0.1);
 }
 
 .dashboard-section-card {
@@ -352,6 +381,9 @@
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   height: 100%;
   position: relative;
+  width: 100%;
+  max-width: 400px;
+  justify-self: center;
 }
 
 .dashboard-section-card:hover {
@@ -361,10 +393,13 @@
 
 .dashboard-section-card.clients {
   border-top: 5px solid #81c784;
+  justify-self: end;
 }
 
 .dashboard-section-card.certificate {
   border-top: 5px solid #81c784;
+  justify-self: start;
+  grid-column-start: 2;
 }
 
 .dashboard-section-card.admin {
@@ -510,7 +545,7 @@
 @media (min-width: 768px) {
   .dashboard-sections {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -529,5 +564,14 @@
 
   .dashboard-sections {
     grid-template-columns: 1fr;
+  }
+
+  .dashboard-section-card.certificate {
+    grid-column-start: auto;
+    justify-self: center;
+  }
+
+  .dashboard-section-card.clients {
+    justify-self: center;
   }
 }

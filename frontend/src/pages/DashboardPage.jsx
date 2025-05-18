@@ -65,11 +65,11 @@ const DashboardPage = () => {
                 <div className="user-info-content">
                   <span className="user-info-label">Setor</span>
                   <span className="user-info-value">{user.setor}</span>
-                </div>
+                </div>{" "}
               </div>
             </div>
           </div>
-        )}{" "}
+        )}
         <div className="dashboard-sections">
           <div className="dashboard-section-card clients">
             <div className="card-icon-container">
