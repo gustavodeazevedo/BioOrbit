@@ -1,0 +1,260 @@
+.login-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background-image: url("../images/GreenListNewFundo.svg"); /* Path to your background image */
+  background-size: cover; /* Ensure the image covers the entire background */
+  background-position: center; /* Center the background image */
+  background-repeat: no-repeat; /* Prevent the background from repeating */
+}
+
+.login-logo {
+  margin-bottom: 40px;
+}
+
+.logo-image {
+  width: 100px; /* Adjust size as needed */
+  height: 100px;
+  border-radius: 50%;
+  animation: logoAnimation 1.5s ease-out forwards,
+    logoPulse 2s ease-in-out 1.5s infinite alternate;
+}
+
+@keyframes logoAnimation {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) rotate(-10deg);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.1) rotate(5deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+
+@keyframes logoPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(61, 154, 89, 0.4);
+    transform: scale(1);
+  }
+  100% {
+    box-shadow: 0 0 20px 10px rgba(61, 154, 89, 0.2);
+    transform: scale(1.05);
+  }
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.input-group {
+  position: relative; /* Ensure the icon is positioned relative to the input */
+  margin-bottom: 10px;
+}
+
+.input-wrapper {
+  position: relative;
+}
+
+.login-input.with-icon {
+  padding-left: 40px; /* Add padding to make space for the icon */
+}
+
+.input-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px; /* Adjust size as needed */
+  height: 20px;
+  pointer-events: none; /* Ensure the icon doesn't interfere with input focus */
+}
+
+.login-input {
+  width: 250px;
+  padding: 10px;
+  border: 1px solid #4caf50; /* Border color */
+  border-radius: 5px;
+  background-color: transparent;
+  color: #4caf50; /* Text color */
+  transition: border-color 0.3s ease, background-color 0.3s ease; /* Add transition for smooth animation */
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeInUp 0.5s ease-out 1.8s forwards;
+}
+
+.login-input::placeholder {
+  color: ; /* Placeholder text color */
+}
+
+.login-input:focus {
+  border-color: #4caf50; /* Keep border color consistent with unfocused state */
+  outline: none; /* Remove default focus outline */
+}
+
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.login-button {
+  width: 250px;
+  padding: 10px;
+  background-color: #a5d6a7; /* Button background color */
+  color: #0b6200; /* Button text color */
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 10px;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeInUp 0.5s ease-out 2.2s forwards;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.login-button:hover {
+  background-color: #81c784;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.forgot-password {
+  margin-top: 10px;
+  color: #0b6200; /* Link color */
+  text-decoration: none;
+}
+
+.error-message {
+  color: #e74c3c;
+  background-color: #fadbd8;
+  padding: 10px;
+  border-radius: 5px;
+  margin-bottom: 15px;
+  text-align: center;
+  font-size: 14px;
+  border: 1px solid #e74c3c;
+}
+
+.success-message {
+  color: #2ecc71;
+  background-color: #d5f5e3;
+  padding: 10px;
+  border-radius: 5px;
+  margin-bottom: 15px;
+  text-align: center;
+  font-size: 14px;
+  border: 1px solid #2ecc71;
+}
+
+.form-title {
+  color: #0b6200;
+  margin-bottom: 10px;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.form-description {
+  color: #0b6200;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+  text-align: center;
+  max-width: 100%;
+  padding: 0 15px;
+  word-wrap: break-word;
+}
+
+/* Media queries para dispositivos móveis */
+@media screen and (max-width: 480px) {
+  .form-description {
+    font-size: 0.85rem;
+    padding: 0 10px;
+    margin-bottom: 15px;
+  }
+
+  .login-input {
+    width: 220px;
+  }
+
+  .login-button {
+    width: 220px;
+    font-size: 0.85rem;
+    padding: 8px 5px;
+    white-space: normal;
+    height: auto;
+    min-height: 44px;
+  }
+
+  .form-title {
+    font-size: 1.3rem;
+  }
+
+  .login-logo {
+    margin-bottom: 20px;
+  }
+
+  .logo-image {
+    width: 80px;
+    height: 80px;
+  }
+}
+
+/* Media queries para dispositivos móveis muito pequenos */
+@media screen and (max-width: 320px) {
+  .form-description {
+    font-size: 0.8rem;
+    padding: 0 8px;
+    margin-bottom: 12px;
+    line-height: 1.3;
+  }
+
+  .login-input {
+    width: 200px;
+  }
+
+  .login-button {
+    width: 200px;
+    font-size: 0.8rem;
+    min-height: 40px;
+  }
+
+  .form-title {
+    font-size: 1.2rem;
+  }
+
+  .logo-image {
+    width: 70px;
+    height: 70px;
+  }
+}
+
+.links-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 10px;
+  gap: 10px;
+  opacity: 0;
+  animation: fadeIn 0.5s ease-out 2.5s forwards;
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}

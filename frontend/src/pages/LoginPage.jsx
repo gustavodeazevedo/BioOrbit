@@ -1,14 +1,17 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import FormInput from "../components/FormInput";
-import Button from "../components/Button";
 import { useAuth } from "../contexts/AuthContext";
+import { FaUser, FaLock, FaKey, FaEye, FaEyeSlash } from "react-icons/fa";
+import "../styles/Auth.css";
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({
     email: "",
     senha: "",
+    corporateToken: "",
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showToken, setShowToken] = useState(false);
   const [formErrors, setFormErrors] = useState({});
   const { login, error } = useAuth();
   const navigate = useNavigate();
@@ -26,6 +29,8 @@ const LoginPage = () => {
     const errors = {};
     if (!formData.email) errors.email = "Email é obrigatório";
     if (!formData.senha) errors.senha = "Senha é obrigatória";
+    if (!formData.corporateToken)
+      errors.corporateToken = "Token corporativo é obrigatório";
 
     // Validação básica de email
     if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
@@ -42,7 +47,7 @@ const LoginPage = () => {
     if (!validateForm()) return;
 
     try {
-      await login(formData.email, formData.senha);
+      await login(formData.email, formData.senha, formData.corporateToken);
       navigate("/dashboard");
     } catch (err) {
       console.error("Erro no login:", err);
@@ -51,66 +56,105 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="flex justify-center items-center min-h-[80vh]">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
-          Login - BioCalib
-        </h2>
-
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          <FormInput
-            label="Email"
-            type="email"
-            id="email"
-            value={formData.email}
-            onChange={handleChange}
-            placeholder="seu@email.com"
-            required
-            error={formErrors.email}
-          />
-
-          <FormInput
-            label="Senha"
-            type="password"
-            id="senha"
-            value={formData.senha}
-            onChange={handleChange}
-            required
-            error={formErrors.senha}
-          />
-
-          <div className="flex justify-between items-center mb-6">
-            <div className="text-sm">
-              <Link
-                to="/recuperar-senha"
-                className="text-blue-600 hover:text-blue-800"
-              >
-                Esqueceu sua senha?
-              </Link>
-            </div>
-          </div>
-
-          <Button className="w-full">Entrar</Button>
-        </form>
-
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
-            Não tem uma conta?{" "}
-            <Link
-              to="/registro"
-              className="text-blue-600 hover:text-blue-800 font-medium"
-            >
-              Cadastre-se
-            </Link>
-          </p>
-        </div>
+    <div className="login-container">
+      <div className="login-logo">
+        <img
+          src="/images/logo-bio-research.png"
+          alt="Bio Research do Brasil Logo"
+          className="logo-image"
+        />
       </div>
+
+      <form onSubmit={handleSubmit} className="login-form">
+        <h2 className="form-title">BioOrbit</h2>
+        <p className="form-description">
+          Sistema de Calibração de Equipamentos Biomédicos
+        </p>
+
+        {error && <div className="error-message">{error}</div>}
+
+        <div className="input-group">
+          <div className="input-wrapper">
+            <FaUser className="input-icon" />
+            <input
+              type="email"
+              placeholder="E-MAIL"
+              id="email"
+              className="login-input with-icon"
+              style={{ animationDelay: "0.1s" }}
+              value={formData.email}
+              onChange={handleChange}
+              required
+            />
+            {formErrors.email && (
+              <div className="error-message">{formErrors.email}</div>
+            )}
+          </div>
+        </div>
+
+        <div className="input-group">
+          <div className="input-wrapper">
+            <FaLock className="input-icon" />
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="SENHA"
+              id="senha"
+              className="login-input with-icon"
+              style={{ animationDelay: "0.2s" }}
+              value={formData.senha}
+              onChange={handleChange}
+              required
+            />
+            <div
+              className="toggle-password"
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? <FaEyeSlash /> : <FaEye />}
+            </div>
+            {formErrors.senha && (
+              <div className="error-message">{formErrors.senha}</div>
+            )}
+          </div>
+        </div>
+
+        <div className="input-group">
+          <div className="input-wrapper">
+            <FaKey className="input-icon" />
+            <input
+              type={showToken ? "text" : "password"}
+              placeholder="TOKEN CORPORATIVO"
+              id="corporateToken"
+              className="login-input with-icon"
+              style={{ animationDelay: "0.3s" }}
+              value={formData.corporateToken}
+              onChange={handleChange}
+              required
+            />
+            <div
+              className="toggle-password"
+              onClick={() => setShowToken(!showToken)}
+            >
+              {showToken ? <FaEyeSlash /> : <FaEye />}
+            </div>
+            {formErrors.corporateToken && (
+              <div className="error-message">{formErrors.corporateToken}</div>
+            )}
+          </div>
+        </div>
+
+        <button type="submit" className="login-button">
+          ENTRAR
+        </button>
+
+        <div className="links-container">
+          <Link to="/recuperar-senha" className="forgot-password">
+            Esqueci minha senha
+          </Link>
+          <Link to="/registro" className="forgot-password">
+            Não tem uma conta? Cadastre-se
+          </Link>
+        </div>
+      </form>
     </div>
   );
 };

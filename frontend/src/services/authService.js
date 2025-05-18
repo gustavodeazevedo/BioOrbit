@@ -1,20 +1,25 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api/usuarios';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/usuarios';
 
 // Serviço para autenticação de usuários
 const authService = {
-    // Login de usuário
-    login: async (email, senha) => {
-        const response = await axios.post(`${API_URL}/login`, { email, senha });
+    // Login de usuário com token corporativo
+    login: async (email, senha, corporateToken) => {
+        const response = await axios.post(`${API_URL}/login`, {
+            email,
+            senha,
+            corporateToken // Adicionando token corporativo
+        });
         if (response.data) {
             localStorage.setItem('userInfo', JSON.stringify(response.data));
         }
         return response.data;
     },
 
-    // Registro de novo usuário
+    // Registro de novo usuário com token corporativo
     register: async (userData) => {
+        // userData já contém o corporateToken enviado do formulário
         const response = await axios.post(API_URL, userData);
         if (response.data) {
             localStorage.setItem('userInfo', JSON.stringify(response.data));

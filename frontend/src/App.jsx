@@ -10,6 +10,10 @@ import RegisterPage from "./pages/RegisterPage";
 import RecuperarSenhaPage from "./pages/RecuperarSenhaPage";
 import RedefinirSenhaPage from "./pages/RedefinirSenhaPage";
 import DashboardPage from "./pages/DashboardPage";
+import ClientesPage from "./pages/ClientesPage";
+import ClienteFormPage from "./pages/ClienteFormPage";
+import SelecionarClientePage from "./pages/SelecionarClientePage";
+import EmitirCertificadoPage from "./pages/EmitirCertificadoPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import HomeRedirect from "./components/HomeRedirect";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
@@ -19,11 +23,6 @@ function App() {
     <AuthProvider>
       <Router>
         <div className="min-h-screen bg-gray-50">
-          <header className="bg-blue-600 text-white shadow-md">
-            <div className="container mx-auto px-4 py-4">
-              <h1 className="text-2xl font-bold">BioCalib</h1>
-            </div>
-          </header>
           <main className="container mx-auto px-4 py-8">
             <Routes>
               <Route path="/" element={<HomeRedirect />} />
@@ -40,18 +39,37 @@ function App() {
               {/* Rotas protegidas */}
               <Route element={<ProtectedRoute />}>
                 <Route path="/dashboard" element={<DashboardPage />} />
+
+                {/* Rotas de clientes */}
+                <Route path="/clientes" element={<ClientesPage />} />
+                <Route path="/clientes/novo" element={<ClienteFormPage />} />
+                <Route
+                  path="/clientes/editar/:id"
+                  element={<ClienteFormPage />}
+                />
+
+                {/* Rotas de certificados */}
+                <Route
+                  path="/selecionar-cliente"
+                  element={<SelecionarClientePage />}
+                />
+                <Route
+                  path="/emitir-certificado/:id"
+                  element={<EmitirCertificadoPage />}
+                />
+
                 {/* Outras rotas protegidas serão adicionadas aqui */}
               </Route>
 
               {/* Rotas protegidas apenas para admin */}
               <Route element={<ProtectedRoute adminOnly={true} />}>
-                {/* Rotas de admin serão adicionadas aqui */}
+                {/* Outras rotas de admin serão adicionadas aqui */}
               </Route>
             </Routes>
           </main>
           <footer className="bg-gray-100 border-t mt-auto">
             <div className="container mx-auto px-4 py-4 text-center text-gray-500">
-              &copy; {new Date().getFullYear()} BioCalib - Todos os direitos
+              &copy; {new Date().getFullYear()} BioOrbit - Todos os direitos
               reservados
             </div>
           </footer>

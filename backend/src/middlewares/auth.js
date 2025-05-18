@@ -19,15 +19,18 @@ const protect = async (req, res, next) => {
 
             next();
         } catch (error) {
-            console.error(error);
-            res.status(401);
-            throw new Error('Não autorizado, token inválido');
+            console.error('Erro de autenticação:', error);
+            return res.status(401).json({
+                success: false,
+                message: 'Não autorizado, token inválido',
+                error: error.message
+            });
         }
-    }
-
-    if (!token) {
-        res.status(401);
-        throw new Error('Não autorizado, sem token');
+    } else if (!token) {
+        return res.status(401).json({
+            success: false,
+            message: 'Não autorizado, sem token'
+        });
     }
 };
 
@@ -36,8 +39,10 @@ const admin = (req, res, next) => {
     if (req.usuario && req.usuario.isAdmin) {
         next();
     } else {
-        res.status(401);
-        throw new Error('Não autorizado como administrador');
+        return res.status(401).json({
+            success: false,
+            message: 'Não autorizado como administrador'
+        });
     }
 };
 

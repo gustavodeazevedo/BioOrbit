@@ -11,16 +11,17 @@ const {
     deleteUsuario
 } = require('../controllers/usuariosController');
 const { protect, admin } = require('../middlewares/auth');
+const { verifyToken } = require('../middlewares/tokenVerification');
 
 // @route   POST /api/usuarios/login
 // @desc    Authenticate usuario & get token
 // @access  Public
-router.post('/login', authUsuario);
+router.post('/login', verifyToken, authUsuario);
 
 // @route   POST /api/usuarios
 // @desc    Register a usuario
 // @access  Public
-router.post('/', registerUsuario);
+router.post('/', verifyToken, registerUsuario);
 
 // @route   GET /api/usuarios/perfil
 // @desc    Get user profile

@@ -31,12 +31,12 @@ export const AuthProvider = ({ children }) => {
     loadUser();
   }, []);
 
-  // Função de login
-  const login = async (email, senha) => {
+  // Função de login atualizada para incluir token corporativo
+  const login = async (email, senha, corporateToken) => {
     try {
       setError(null);
       setLoading(true);
-      const userData = await authService.login(email, senha);
+      const userData = await authService.login(email, senha, corporateToken);
       setUser(userData);
       return userData;
     } catch (err) {
@@ -47,7 +47,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Função de registro
+  // Função de registro atualizada para incluir token corporativo no userData
   const register = async (userData) => {
     try {
       setError(null);
