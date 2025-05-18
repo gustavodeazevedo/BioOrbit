@@ -3,38 +3,54 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  min-height: 100vh;
   padding: 2rem;
-  background-color: #f8f8f8;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
 }
 
 .dashboard-panel {
   width: 100%;
-  max-width: 900px;
+  max-width: 1000px;
   background-color: white;
   padding: 2rem;
-  border-radius: 0.5rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border-radius: 1rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
   opacity: 0;
-  animation: fadeInUp 0.5s ease-out forwards;
+  animation: fadeInUp 0.6s ease-out forwards;
 }
 
 .dashboard-header {
   margin-bottom: 2rem;
   text-align: center;
+  position: relative;
 }
 
 .dashboard-title {
   color: #0b6200;
-  font-size: 1.8rem;
-  font-weight: 600;
+  font-size: 2.2rem;
+  font-weight: 700;
   margin-bottom: 0.5rem;
   opacity: 0;
   animation: fadeInUp 0.5s ease-out 0.1s forwards;
+  position: relative;
+}
+
+.dashboard-title::after {
+  content: "";
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(90deg, #0b6200, #81c784);
+  border-radius: 2px;
 }
 
 .dashboard-welcome {
-  color: #0b6200;
-  font-size: 1rem;
+  color: #4b5563;
+  font-size: 1.1rem;
+  margin-top: 1rem;
   opacity: 0;
   animation: fadeInUp 0.5s ease-out 0.2s forwards;
 }
@@ -186,6 +202,26 @@
   transform: translateY(-2px);
 }
 
+/* Seção de Certificado */
+.dashboard-section.certificate {
+  background-color: #e8f5e9;
+  border-color: #81c784;
+}
+
+.certificate .section-title {
+  color: #2e7d32;
+}
+
+.dashboard-button.certificate-btn {
+  background-color: #a5d6a7;
+  color: #0b6200;
+}
+
+.dashboard-button.certificate-btn:hover {
+  background-color: #81c784;
+  transform: translateY(-2px);
+}
+
 /* codificando */
 
 .dashboard-button.admin-btn {
@@ -224,6 +260,242 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+/* Card de informações do usuário */
+.user-info-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+  margin-bottom: 2rem;
+  border-left: 4px solid #0b6200;
+  opacity: 0;
+  animation: fadeInUp 0.5s ease-out 0.3s forwards;
+  position: relative;
+}
+
+.user-info-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1.2rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.user-avatar {
+  font-size: 2rem;
+  color: #0b6200;
+  margin-right: 1rem;
+}
+
+.user-info-title {
+  color: #0b6200;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.user-info-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.user-info-row {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0;
+  flex: 1 1 45%;
+  min-width: 220px;
+}
+
+.user-info-icon {
+  font-size: 1.2rem;
+  color: #0b6200;
+  margin-right: 0.8rem;
+}
+
+.user-info-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-info-label {
+  font-weight: 600;
+  color: #0b6200;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+
+.user-info-value {
+  color: #4b5563;
+  font-size: 1rem;
+}
+
+/* Cards de seção */
+.dashboard-sections {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  opacity: 0;
+  animation: fadeInUp 0.5s ease-out 0.4s forwards;
+}
+
+.dashboard-section-card {
+  display: flex;
+  flex-direction: column;
+  background-color: white;
+  border-radius: 1rem;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  height: 100%;
+  position: relative;
+}
+
+.dashboard-section-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-section-card.clients {
+  border-top: 5px solid #81c784;
+}
+
+.dashboard-section-card.certificate {
+  border-top: 5px solid #81c784;
+}
+
+.dashboard-section-card.admin {
+  border-top: 5px solid #ce93d8;
+}
+
+.card-icon-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1.5rem 0;
+}
+
+.card-icon {
+  font-size: 3rem;
+  color: #0b6200;
+}
+
+.dashboard-section-card.clients .card-icon,
+.dashboard-section-card.certificate .card-icon {
+  color: #0b6200;
+}
+
+.dashboard-section-card.admin .card-icon {
+  color: #6a1b9a;
+}
+
+.card-content {
+  padding: 0 1.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  text-align: center;
+}
+
+.clients .section-title,
+.certificate .section-title {
+  color: #2e7d32;
+}
+
+.admin .section-title {
+  color: #6a1b9a;
+}
+
+.section-description {
+  font-size: 0.95rem;
+  color: #6b7280;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  flex: 1;
+}
+
+.dashboard-button {
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.3s ease;
+  border: none;
+  display: block;
+  width: 100%;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.875rem;
+}
+
+.dashboard-button.clients-btn,
+.dashboard-button.certificate-btn {
+  background: linear-gradient(135deg, #81c784 0%, #4caf50 100%);
+  color: white;
+}
+
+.dashboard-button.clients-btn:hover,
+.dashboard-button.certificate-btn:hover {
+  background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
+}
+
+.dashboard-button.admin-btn {
+  background: linear-gradient(135deg, #ce93d8 0%, #ba68c8 100%);
+  color: white;
+}
+
+.dashboard-button.admin-btn:hover {
+  background: linear-gradient(135deg, #ba68c8 0%, #8e24aa 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(186, 104, 200, 0.3);
+}
+
+.dashboard-footer {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  text-align: right;
+  opacity: 0;
+  animation: fadeInUp 0.5s ease-out 0.5s forwards;
+}
+
+.logout-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #ef5350 0%, #e53935 100%);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 5px rgba(239, 83, 80, 0.3);
+}
+
+.logout-button:hover {
+  background: linear-gradient(135deg, #e53935 0%, #c62828 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 10px rgba(229, 57, 53, 0.4);
+}
+
+.logout-icon {
+  margin-right: 0.5rem;
+}
+
 @keyframes fadeInUp {
   0% {
     opacity: 0;
@@ -239,5 +511,23 @@
   .dashboard-sections {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-panel {
+    padding: 1.5rem;
+  }
+
+  .user-info-details {
+    flex-direction: column;
+  }
+
+  .user-info-row {
+    flex: 1 1 100%;
+  }
+
+  .dashboard-sections {
+    grid-template-columns: 1fr;
   }
 }
