@@ -1,7 +1,7 @@
 {
-  "name": "biocalib-frontend",
+  "name": "bioorbit-frontend",
   "version": "1.0.0",
-  "description": "Frontend para o projeto BioCalib",
+  "description": "Frontend para o projeto BioOrbit",
   "type": "module",
   "scripts": {
     "dev": "vite",

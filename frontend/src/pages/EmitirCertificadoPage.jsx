@@ -27,13 +27,8 @@ const EmitirCertificadoPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
-    numeroCertificado: `CERT-${new Date().getFullYear()}-${String(
-      Math.floor(Math.random() * 10000)
-    ).padStart(4, "0")}`,
+    numeroCertificado: "",
     dataCalibracao: new Date().toISOString().split("T")[0],
-    dataValidade: new Date(new Date().setFullYear(new Date().getFullYear() + 1))
-      .toISOString()
-      .split("T")[0],
     marcaPipeta: "",
     modeloPipeta: "",
     numeroPipeta: "",
@@ -599,6 +594,7 @@ const EmitirCertificadoPage = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
+                {" "}
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Número do Certificado
                 </label>
@@ -607,11 +603,11 @@ const EmitirCertificadoPage = () => {
                   name="numeroCertificado"
                   value={formData.numeroCertificado}
                   onChange={handleChange}
+                  placeholder="Ex: 8550.1"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                   required
                 />
-              </div>
-
+              </div>{" "}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Data da Calibração
@@ -620,20 +616,6 @@ const EmitirCertificadoPage = () => {
                   type="date"
                   name="dataCalibracao"
                   value={formData.dataCalibracao}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Data da Validade
-                </label>
-                <input
-                  type="date"
-                  name="dataValidade"
-                  value={formData.dataValidade}
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                   required
