@@ -2,15 +2,15 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import {
-  FaUser,
-  FaLock,
-  FaEnvelope,
-  FaBuilding,
-  FaUsers,
-  FaKey,
-  FaEye,
-  FaEyeSlash,
-} from "react-icons/fa";
+  UserRound,
+  Lock,
+  Mail,
+  Building,
+  UsersRound,
+  Key,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import "../styles/Auth.css";
 
 const RegisterPage = () => {
@@ -88,28 +88,25 @@ const RegisterPage = () => {
       console.error("Erro no cadastro:", err);
     }
   };
-
   return (
     <div className="login-container">
-      <div className="login-logo">
-        <img
-          src="/images/logo-bio-research.png"
-          alt="Bio Research do Brasil Logo"
-          className="logo-image"
-        />
-      </div>
-
       <form onSubmit={handleSubmit} className="login-form">
-        <h2 className="form-title">Cadastro - BioOrbit</h2>
+        {" "}
+        <div className="login-logo">
+          <img
+            src="/images/logo-bio-research.png"
+            alt="BioResearch do Brasil Logo"
+            className="logo-image"
+          />
+        </div>
+        <h2 className="form-title">BioResearch - BioOrbit</h2>
         <p className="form-description">
           Complete suas informações para criar sua conta
         </p>
-
-        {error && <div className="error-message">{error}</div>}
-
+        {error && <div className="error-message">{error}</div>}{" "}
         <div className="input-group">
           <div className="input-wrapper">
-            <FaUser className="input-icon" />
+            <UserRound className="input-icon" />
             <input
               type="text"
               placeholder="NOME COMPLETO"
@@ -125,10 +122,10 @@ const RegisterPage = () => {
             )}
           </div>
         </div>
-
         <div className="input-group">
           <div className="input-wrapper">
-            <FaEnvelope className="input-icon" />
+            {" "}
+            <Mail className="input-icon" />
             <input
               type="email"
               placeholder="E-MAIL"
@@ -144,10 +141,9 @@ const RegisterPage = () => {
             )}
           </div>
         </div>
-
         <div className="input-group">
           <div className="input-wrapper">
-            <FaBuilding className="input-icon" />
+            <Building className="input-icon" />
             <input
               type="text"
               placeholder="CARGO"
@@ -162,11 +158,10 @@ const RegisterPage = () => {
               <div className="error-message">{formErrors.cargo}</div>
             )}
           </div>
-        </div>
-
+        </div>{" "}
         <div className="input-group">
           <div className="input-wrapper">
-            <FaUsers className="input-icon" />
+            <UsersRound className="input-icon" />
             <input
               type="text"
               placeholder="SETOR"
@@ -181,11 +176,10 @@ const RegisterPage = () => {
               <div className="error-message">{formErrors.setor}</div>
             )}
           </div>
-        </div>
-
+        </div>{" "}
         <div className="input-group">
           <div className="input-wrapper">
-            <FaLock className="input-icon" />
+            <Lock className="input-icon" />
             <input
               type={showPassword ? "text" : "password"}
               placeholder="SENHA"
@@ -195,22 +189,23 @@ const RegisterPage = () => {
               value={formData.senha}
               onChange={handleChange}
               required
-            />
-            <div
-              className="toggle-password"
-              onClick={() => setShowPassword(!showPassword)}
-            >
-              {showPassword ? <FaEyeSlash /> : <FaEye />}
-            </div>
+            />{" "}
+            {formData.senha && (
+              <div
+                className="toggle-password"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff /> : <Eye />}
+              </div>
+            )}
             {formErrors.senha && (
               <div className="error-message">{formErrors.senha}</div>
             )}
           </div>
-        </div>
-
+        </div>{" "}
         <div className="input-group">
           <div className="input-wrapper">
-            <FaLock className="input-icon" />
+            <Lock className="input-icon" />
             <input
               type={showConfirmPassword ? "text" : "password"}
               placeholder="CONFIRMAR SENHA"
@@ -221,21 +216,22 @@ const RegisterPage = () => {
               onChange={handleChange}
               required
             />
-            <div
-              className="toggle-password"
-              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            >
-              {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
-            </div>
+            {formData.confirmarSenha && (
+              <div
+                className="toggle-password"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                {showConfirmPassword ? <EyeOff /> : <Eye />}
+              </div>
+            )}
             {formErrors.confirmarSenha && (
               <div className="error-message">{formErrors.confirmarSenha}</div>
             )}
           </div>
-        </div>
-
+        </div>{" "}
         <div className="input-group">
           <div className="input-wrapper">
-            <FaKey className="input-icon" />
+            <Key className="input-icon" />
             <input
               type={showToken ? "text" : "password"}
               placeholder="TOKEN CORPORATIVO"
@@ -246,22 +242,22 @@ const RegisterPage = () => {
               onChange={handleChange}
               required
             />
-            <div
-              className="toggle-password"
-              onClick={() => setShowToken(!showToken)}
-            >
-              {showToken ? <FaEyeSlash /> : <FaEye />}
-            </div>
+            {formData.corporateToken && (
+              <div
+                className="toggle-password"
+                onClick={() => setShowToken(!showToken)}
+              >
+                {showToken ? <EyeOff /> : <Eye />}
+              </div>
+            )}
             {formErrors.corporateToken && (
               <div className="error-message">{formErrors.corporateToken}</div>
             )}
           </div>
         </div>
-
         <button type="submit" className="login-button">
           CADASTRAR
         </button>
-
         <div className="links-container">
           <Link to="/login" className="forgot-password">
             Já tem uma conta? Faça login

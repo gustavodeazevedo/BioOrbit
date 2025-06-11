@@ -64,15 +64,8 @@ function App() {
               {/* Rotas protegidas apenas para admin */}
               <Route element={<ProtectedRoute adminOnly={true} />}>
                 {/* Outras rotas de admin serão adicionadas aqui */}
-              </Route>
-            </Routes>
+              </Route>            </Routes>
           </main>
-          <footer className="bg-gray-100 border-t mt-auto">
-            <div className="container mx-auto px-4 py-4 text-center text-gray-500">
-              &copy; {new Date().getFullYear()} BioOrbit - Todos os direitos
-              reservados
-            </div>
-          </footer>
         </div>
       </Router>
     </AuthProvider>

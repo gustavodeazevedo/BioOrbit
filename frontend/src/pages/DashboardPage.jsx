@@ -2,15 +2,15 @@ import React from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import {
-  FaShieldAlt,
-  FaSignOutAlt,
-  FaUserPlus,
-  FaCertificate,
-  FaUserCircle,
-  FaEnvelope,
-  FaBriefcase,
-  FaBuilding,
-} from "react-icons/fa";
+  Shield,
+  LogOut,
+  UserPlus,
+  Award,
+  UserRound,
+  Mail,
+  Briefcase,
+  Building,
+} from "lucide-react";
 import "../styles/Dashboard.css";
 
 const DashboardPage = () => {
@@ -32,36 +32,37 @@ const DashboardPage = () => {
         </div>
         {user && (
           <div className="user-info-card">
+            {" "}
             <div className="user-info-header">
-              <FaUserCircle className="user-avatar" />
+              <UserRound className="user-avatar" />
               <h3 className="user-info-title">
                 Olá, {user.nome.split(" ")[0]}
               </h3>
             </div>
             <div className="user-info-details">
               <div className="user-info-row">
-                <FaUserCircle className="user-info-icon" />
+                <UserRound className="user-info-icon" />
                 <div className="user-info-content">
                   <span className="user-info-label">Nome</span>
                   <span className="user-info-value">{user.nome}</span>
                 </div>
               </div>
               <div className="user-info-row">
-                <FaEnvelope className="user-info-icon" />
+                <Mail className="user-info-icon" />
                 <div className="user-info-content">
                   <span className="user-info-label">Email</span>
                   <span className="user-info-value">{user.email}</span>
                 </div>
               </div>
               <div className="user-info-row">
-                <FaBriefcase className="user-info-icon" />
+                <Briefcase className="user-info-icon" />
                 <div className="user-info-content">
                   <span className="user-info-label">Cargo</span>
                   <span className="user-info-value">{user.cargo}</span>
                 </div>
               </div>
               <div className="user-info-row">
-                <FaBuilding className="user-info-icon" />
+                <Building className="user-info-icon" />
                 <div className="user-info-content">
                   <span className="user-info-label">Setor</span>
                   <span className="user-info-value">{user.setor}</span>
@@ -71,9 +72,10 @@ const DashboardPage = () => {
           </div>
         )}
         <div className="dashboard-sections">
+          {" "}
           <div className="dashboard-section-card clients">
             <div className="card-icon-container">
-              <FaUserPlus className="card-icon" />
+              <UserPlus className="card-icon" />
             </div>
             <div className="card-content">
               <h3 className="section-title">Registro de Cliente</h3>
@@ -87,11 +89,10 @@ const DashboardPage = () => {
                 Gerenciar Clientes
               </button>
             </div>
-          </div>
-
+          </div>{" "}
           <div className="dashboard-section-card certificate">
             <div className="card-icon-container">
-              <FaCertificate className="card-icon" />
+              <Award className="card-icon" />
             </div>
             <div className="card-content">
               <h3 className="section-title">Emitir Certificado</h3>
@@ -106,12 +107,11 @@ const DashboardPage = () => {
               </button>
             </div>
           </div>
-
           {/* Seção de Administração - visível apenas para admins, mas sem o botão de token */}
           {isAdmin() && (
             <div className="dashboard-section-card admin">
               <div className="card-icon-container">
-                <FaShieldAlt className="card-icon" />
+                <Shield className="card-icon" />
               </div>
               <div className="card-content">
                 <h3 className="section-title">Administração</h3>
@@ -124,8 +124,9 @@ const DashboardPage = () => {
           )}
         </div>{" "}
         <div className="dashboard-footer">
+          {" "}
           <button className="logout-button" onClick={handleLogout}>
-            <FaSignOutAlt className="logout-icon" />
+            <LogOut className="logout-icon" />
             <span>Sair</span>
           </button>
         </div>
