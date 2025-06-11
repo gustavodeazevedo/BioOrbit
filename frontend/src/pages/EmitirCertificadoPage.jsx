@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -28,6 +28,9 @@ const EmitirCertificadoPage = () => {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  
+  // Ref para controlar a navegação entre inputs
+  const formRef = useRef(null);
 
   const [cliente, setCliente] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -206,7 +209,6 @@ const EmitirCertificadoPage = () => {
       });
     }
   };
-
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -218,6 +220,31 @@ const EmitirCertificadoPage = () => {
     // Simula a geração do certificado bem-sucedida
     console.log("Certificado gerado para o cliente:", cliente?.nome);
     console.log("Dados do certificado:", formData);
+  };
+
+  // Função para navegar para o próximo input quando Enter for pressionado
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      
+      if (!formRef.current) return;
+      
+      // Seleciona todos os inputs, selects e buttons focáveis no formulário
+      const focusableElements = formRef.current.querySelectorAll(
+        'input:not([disabled]):not([type="hidden"]), select:not([disabled]), button:not([disabled]):not([type="submit"])'
+      );
+      
+      const focusableArray = Array.from(focusableElements);
+      const currentIndex = focusableArray.indexOf(e.target);
+      
+      if (currentIndex > -1 && currentIndex < focusableArray.length - 1) {
+        // Move para o próximo elemento
+        focusableArray[currentIndex + 1].focus();
+      } else if (currentIndex === focusableArray.length - 1) {
+        // Se for o último elemento, volta para o primeiro
+        focusableArray[0].focus();
+      }
+    }
   };
 
   // Função que seria chamada para fazer o download do certificado
@@ -993,7 +1020,12 @@ const EmitirCertificadoPage = () => {
           </button>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-6">          <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+        <form 
+          onSubmit={handleSubmit} 
+          onKeyDown={handleKeyDown}
+          className="space-y-6" 
+          ref={formRef}
+        >          <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
             <h3 
               className="text-lg font-semibold mb-3"
               style={{ color: "rgb(75, 85, 99)" }}
