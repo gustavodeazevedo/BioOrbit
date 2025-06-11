@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { FaEnvelope, FaArrowLeft } from "react-icons/fa";
+import { Mail, ArrowLeft } from "lucide-react";
 import "../styles/Auth.css";
 
 const RecuperarSenhaPage = () => {
@@ -47,7 +47,11 @@ const RecuperarSenhaPage = () => {
   return (
     <div className="login-container">
       <div className="login-logo">
-        <img src="/images/logo-bio-research.png" alt="Bio Research do Brasil Logo" className="logo-image" />
+        <img
+          src="/images/logo-bio-research.png"
+          alt="Bio Research do Brasil Logo"
+          className="logo-image"
+        />
       </div>
 
       <div className="login-form">
@@ -76,9 +80,10 @@ const RecuperarSenhaPage = () => {
             </p>
 
             <form onSubmit={handleSubmit} style={{ width: "100%" }}>
+              {" "}
               <div className="input-group">
                 <div className="input-wrapper">
-                  <FaEnvelope className="input-icon" />
+                  <Mail className="input-icon" />
                   <input
                     type="email"
                     placeholder="E-MAIL"
@@ -94,7 +99,6 @@ const RecuperarSenhaPage = () => {
                   )}
                 </div>
               </div>
-
               <button type="submit" className="login-button">
                 ENVIAR INSTRUÇÕES
               </button>

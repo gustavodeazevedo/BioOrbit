@@ -1,5 +1,5 @@
 import React from "react";
-import { FaExclamationTriangle, FaCheck, FaTimes } from "react-icons/fa";
+import { AlertTriangle, Check, X } from "lucide-react";
 
 const ConfirmDialog = ({
   isOpen,
@@ -38,12 +38,13 @@ const ConfirmDialog = ({
                 : "bg-yellow-100"
             }`}
           >
+            {" "}
             {type === "danger" ? (
-              <FaExclamationTriangle className={iconColors[type]} size={18} />
+              <AlertTriangle className={iconColors[type]} size={18} />
             ) : type === "info" ? (
-              <FaCheck className={iconColors[type]} size={18} />
+              <Check className={iconColors[type]} size={18} />
             ) : (
-              <FaExclamationTriangle className={iconColors[type]} size={18} />
+              <AlertTriangle className={iconColors[type]} size={18} />
             )}
           </div>
           <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
@@ -58,13 +59,13 @@ const ConfirmDialog = ({
             onClick={onCancel}
             className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300"
           >
-            <FaTimes className="inline mr-1 -mt-1" /> {cancelText}
+            <X className="inline mr-1 -mt-1" /> {cancelText}
           </button>
           <button
             onClick={onConfirm}
             className={`px-4 py-2 text-sm font-medium text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${buttonColors[type]}`}
           >
-            <FaCheck className="inline mr-1 -mt-1" /> {confirmText}
+            <Check className="inline mr-1 -mt-1" /> {confirmText}
           </button>
         </div>
       </div>

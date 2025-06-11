@@ -1,12 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  FaUserPlus,
-  FaSearch,
-  FaEdit,
-  FaTrash,
-  FaArrowLeft,
-} from "react-icons/fa";
+import { UserPlus, Search, Edit, Trash2, ArrowLeft } from "lucide-react";
 import { getClientes, deleteCliente } from "../services/clienteService";
 
 const ClientesPage = () => {
@@ -58,21 +52,24 @@ const ClientesPage = () => {
     setConfirmDelete(null);
   };
 
-  const filteredClientes = clientes.filter(
-    (cliente) =>
-      cliente.nome.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredClientes = clientes.filter((cliente) =>
+    cliente.nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <div className="p-6 max-w-6xl mx-auto bg-white rounded-lg shadow-md">
       <div className="flex justify-between items-center mb-6">
         <button
-          className="text-green-700 hover:text-green-900 flex items-center"
+          className="hover:opacity-80 flex items-center"
+          style={{ color: "rgb(144, 199, 45)" }}
           onClick={() => navigate("/dashboard")}
         >
-          <FaArrowLeft className="mr-2" /> Voltar ao Dashboard
+          <ArrowLeft className="mr-2" /> Voltar ao Dashboard
         </button>
-        <h1 className="text-2xl font-bold text-center text-green-800">
+        <h1
+          className="text-2xl font-bold text-center"
+          style={{ color: "rgb(144, 199, 45)" }}
+        >
           Gerenciamento de Clientes
         </h1>
         <div>{/* Espaço para equilibrar o layout */}</div>
@@ -80,20 +77,22 @@ const ClientesPage = () => {
 
       <div className="flex justify-between items-center mb-6">
         <div className="relative w-64">
-          <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             placeholder="Buscar cliente..."
-            className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-1 focus:border-[rgb(144,199,45)]"
+            style={{ "--tw-ring-color": "rgb(144, 199, 45)" }}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
         <button
           onClick={() => navigate("/clientes/novo")}
-          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center"
+          className="text-white px-4 py-2 rounded-lg flex items-center hover:opacity-80"
+          style={{ backgroundColor: "rgb(144, 199, 45)" }}
         >
-          <FaUserPlus className="mr-2" /> Novo Cliente
+          <UserPlus className="mr-2" /> Novo Cliente
         </button>
       </div>
 
@@ -145,7 +144,7 @@ const ClientesPage = () => {
                         onClick={() => handleEdit(cliente._id)}
                         className="text-blue-600 hover:text-blue-800"
                       >
-                        <FaEdit />
+                        <Edit />
                       </button>
                       <button
                         onClick={() => handleDelete(cliente._id)}
@@ -155,7 +154,7 @@ const ClientesPage = () => {
                             : "text-gray-600 hover:text-red-600"
                         }`}
                       >
-                        <FaTrash />
+                        <Trash2 />
                       </button>
                     </div>
                     {confirmDelete === cliente._id && (

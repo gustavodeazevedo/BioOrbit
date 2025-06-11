@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
+import { Lock, Eye, EyeOff } from "lucide-react";
 import "../styles/Auth.css";
 
 const RedefinirSenhaPage = () => {
@@ -76,7 +76,11 @@ const RedefinirSenhaPage = () => {
     return (
       <div className="login-container">
         <div className="login-logo">
-          <img src="/images/logo-bio-research.png" alt="Bio Research do Brasil Logo" className="logo-image" />
+          <img
+            src="/images/logo-bio-research.png"
+            alt="Bio Research do Brasil Logo"
+            className="logo-image"
+          />
         </div>
 
         <div className="login-form">
@@ -97,7 +101,11 @@ const RedefinirSenhaPage = () => {
   return (
     <div className="login-container">
       <div className="login-logo">
-        <img src="/images/logo-bio-research.png" alt="Bio Research do Brasil Logo" className="logo-image" />
+        <img
+          src="/images/logo-bio-research.png"
+          alt="Bio Research do Brasil Logo"
+          className="logo-image"
+        />
       </div>
 
       <div className="login-form">
@@ -125,8 +133,9 @@ const RedefinirSenhaPage = () => {
 
             <form onSubmit={handleSubmit} style={{ width: "100%" }}>
               <div className="input-group">
+                {" "}
                 <div className="input-wrapper">
-                  <FaLock className="input-icon" />
+                  <Lock className="input-icon" />{" "}
                   <input
                     type={showPassword ? "text" : "password"}
                     placeholder="NOVA SENHA"
@@ -137,12 +146,14 @@ const RedefinirSenhaPage = () => {
                     onChange={handleChange}
                     required
                   />
-                  <div
-                    className="toggle-password"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <FaEyeSlash /> : <FaEye />}
-                  </div>
+                  {formData.senha && (
+                    <div
+                      className="toggle-password"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff /> : <Eye />}
+                    </div>
+                  )}
                   {formErrors.senha && (
                     <div className="error-message">{formErrors.senha}</div>
                   )}
@@ -150,8 +161,9 @@ const RedefinirSenhaPage = () => {
               </div>
 
               <div className="input-group">
+                {" "}
                 <div className="input-wrapper">
-                  <FaLock className="input-icon" />
+                  <Lock className="input-icon" />{" "}
                   <input
                     type={showConfirmPassword ? "text" : "password"}
                     placeholder="CONFIRMAR NOVA SENHA"
@@ -162,12 +174,17 @@ const RedefinirSenhaPage = () => {
                     onChange={handleChange}
                     required
                   />
-                  <div
-                    className="toggle-password"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  >
-                    {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
-                  </div>
+                  {formData.confirmarSenha && (
+                    <div
+                      className="toggle-password"
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
+                    >
+                      {" "}
+                      {showConfirmPassword ? <EyeOff /> : <Eye />}
+                    </div>
+                  )}
                   {formErrors.confirmarSenha && (
                     <div className="error-message">
                       {formErrors.confirmarSenha}

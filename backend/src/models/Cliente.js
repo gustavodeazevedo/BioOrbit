@@ -74,12 +74,7 @@ const ClienteSchema = new mongoose.Schema({
             trim: true,
             lowercase: true,
             match: [/^\S+@\S+\.\S+$/, 'Por favor, insira um email válido para o contato']
-        }
-    },
-    observacoes: {
-        type: String,
-        trim: true
-    },
+        }    },
     dataCadastro: {
         type: Date,
         default: Date.now

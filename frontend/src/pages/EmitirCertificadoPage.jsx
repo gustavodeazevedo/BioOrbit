@@ -1,22 +1,28 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import {
-  FaArrowLeft,
-  FaFilePdf,
-  FaDownload,
-  FaThermometerHalf,
-  FaTint,
-  FaVial,
-  FaChartLine,
-  FaPlus,
-  FaMinus,
-  FaCalculator,
-  FaTable,
-  FaEye,
-  FaEyeSlash,
-  FaFileExport,
-} from "react-icons/fa";
+  ArrowLeft,
+  FileText,
+  Download,
+  Thermometer,
+  Droplet,
+  TestTube,
+  TrendingUp,
+  Plus,
+  Minus,
+  Calculator,
+  Table,
+  Eye,
+  EyeOff,
+  FileDown,
+  HelpCircle,
+  Info,
+  Trash2,
+} from "lucide-react";
+import Tooltip from "../components/Tooltip";
+import ConfirmDialog from "../components/ConfirmDialog";
 import { getClienteById } from "../services/clienteService";
+import { formatNumberInput, formatTemperature } from "../utils/formatUtils";
 
 const EmitirCertificadoPage = () => {
   const { id } = useParams();
@@ -28,20 +34,30 @@ const EmitirCertificadoPage = () => {
   const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
     numeroCertificado: "",
-    dataCalibracao: new Date().toISOString().split("T")[0],
+    dataCalibracao: "",
     marcaPipeta: "",
     modeloPipeta: "",
     numeroPipeta: "",
     capacidade: "",
     unidadeCapacidade: "µL",
+    faixaIndicacao: "", // Faixa de indicação da pipeta
+    faixaCalibrada: "", // Faixa calibrada da pipeta
+    tipoInstrumento: "monocanal", // Tipo de instrumento (monocanal/multicanal)
     temperatura: "20.0",
     umidadeRelativa: "50",
-    observacoes: "",
+    // Novos campos para aprimorar o certificado
+    equipamentoReferencia: {
+      balanca: "Mettler Toledo XS105",
+      termometro: "Minipa MT-241",
+      higrometro: "Minipa MT-241",
+    },
+    metodologia: "ISO 8655",
+    validadeCalibracao: "12", // Validade em meses
+    condicoesAmbientaisControladas: true,
   });
   const [certificadoGerado, setCertificadoGerado] = useState(false);
   // Fator Z calculado com base na temperatura
   const [fatorZ, setFatorZ] = useState(1.0029); // Valor padrão para 20°C
-
   // Estado para os pontos de calibração
   const [pontosCalibra, setPontosCalibra] = useState([
     {
@@ -50,49 +66,60 @@ const EmitirCertificadoPage = () => {
       unidade: "µL",
       medicoes: Array(10).fill(""),
       media: null,
+      mediaMassa: null,
       inexatidao: null,
       inexatidaoPercentual: null,
-      incerteza: null,
-      incertezaPercentual: null,
+      desvioPadrao: null,
     },
   ]);
+
+  // Estado para controlar a visibilidade da nota explicativa sobre cálculos
+  const [mostrarNotaCalculos, setMostrarNotaCalculos] = useState(false);
+
+  // Estado para controlar o diálogo de confirmação de remoção
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    pontoId: null,
+  });
 
   // Estado para exibir/esconder a seção de cálculos
   const [mostrarCalculos, setMostrarCalculos] = useState(false);
 
   // Tabela de referência mais precisa para o fator Z baseado na temperatura com incrementos de 0.5°C
   const tabelaFatorZ = {
-    "15.0": 1.0017,
-    15.5: 1.0018,
-    "16.0": 1.0019,
-    16.5: 1.002,
-    "17.0": 1.0021,
-    17.5: 1.0022,
-    "18.0": 1.0023,
-    18.5: 1.0024,
-    "19.0": 1.0026,
-    19.5: 1.0027,
+    "15.0": 1.002,
+    15.5: 1.002,
+    "16.0": 1.0021,
+    16.5: 1.0022,
+    "17.0": 1.0023,
+    17.5: 1.0024,
+    "18.0": 1.0025,
+    18.5: 1.0026,
+    "19.0": 1.0027,
+    19.5: 1.0028,
     "20.0": 1.0029,
-    20.5: 1.0031,
-    "21.0": 1.0032,
-    21.5: 1.0034,
-    "22.0": 1.0036,
-    22.5: 1.0037,
-    "23.0": 1.0039,
-    23.5: 1.004,
-    "24.0": 1.0042,
-    24.5: 1.0043,
-    "25.0": 1.0045,
-    25.5: 1.0047,
-    "26.0": 1.0048,
-    26.5: 1.005,
-    "27.0": 1.0051,
-    27.5: 1.0053,
-    "28.0": 1.0055,
-    28.5: 1.0056,
-    "29.0": 1.0058,
-    29.5: 1.006,
-    "30.0": 1.0061,
+    20.5: 1.003,
+    "21.0": 1.0031,
+    21.5: 1.0032,
+    "22.0": 1.0033,
+    22.5: 1.0034,
+    "23.0": 1.0035,
+    23.5: 1.0036,
+    "24.0": 1.0038,
+    24.5: 1.0039,
+    "25.0": 1.004,
+    25.5: 1.0041,
+    "26.0": 1.0043,
+    26.5: 1.0044,
+    "27.0": 1.0045,
+    27.5: 1.0047,
+    "28.0": 1.0048,
+    28.5: 1.005,
+    "29.0": 1.0051,
+    29.5: 1.0052,
+    "30.0": 1.0054,
   };
 
   // Calcula o fator Z com base na temperatura
@@ -106,17 +133,9 @@ const EmitirCertificadoPage = () => {
   }, [formData.temperatura]);
 
   // Ajusta a temperatura para incrementos de 0.5°C
+  // Utilizando a função de formatTemperature da pasta utils
   const ajustarTemperatura = (valor) => {
-    const temp = parseFloat(valor);
-    if (isNaN(temp)) return "20.0";
-
-    // Arredonda para o incremento de 0.5 mais próximo
-    const tempArredondada = Math.round(temp * 2) / 2;
-
-    // Limita entre 15.0 e 30.0
-    const tempLimitada = Math.max(15.0, Math.min(30.0, tempArredondada));
-
-    return tempLimitada.toFixed(1);
+    return formatTemperature(valor);
   };
 
   // Buscar dados do cliente se não foram passados pelo location state
@@ -149,13 +168,22 @@ const EmitirCertificadoPage = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    const camposNumericos = ["temperatura", "umidadeRelativa", "capacidade"];
 
     if (name === "temperatura") {
       // Para temperatura, ajusta para incrementos de 0.5
-      const temperaturaAjustada = ajustarTemperatura(value);
+      const temperaturaAjustada = formatTemperature(value);
       setFormData({
         ...formData,
         [name]: temperaturaAjustada,
+      });
+    } else if (camposNumericos.includes(name)) {
+      // Para outros campos numéricos, usa a função de formatação de números
+      const valorFormatado = formatNumberInput(value);
+
+      setFormData({
+        ...formData,
+        [name]: valorFormatado,
       });
     } else {
       setFormData({
@@ -210,7 +238,6 @@ const EmitirCertificadoPage = () => {
       complemento ? `, ${complemento}` : ""
     } - ${bairro} - ${cidade}/${estado} - CEP: ${cep}`;
   };
-
   // Função para adicionar um novo ponto de calibração
   const adicionarPontoCalibracao = () => {
     const novoPonto = {
@@ -219,10 +246,10 @@ const EmitirCertificadoPage = () => {
       unidade: "µL",
       medicoes: Array(10).fill(""),
       media: null,
+      mediaMassa: null,
       inexatidao: null,
       inexatidaoPercentual: null,
-      incerteza: null,
-      incertezaPercentual: null,
+      desvioPadrao: null,
     };
 
     setPontosCalibra([...pontosCalibra, novoPonto]);
@@ -255,18 +282,172 @@ const EmitirCertificadoPage = () => {
       pontosCalibra.map((ponto) => {
         if (ponto.id === pontoId) {
           const novasMedicoes = [...ponto.medicoes];
-          // Permite apenas números, ponto e vírgula
-          const valorLimpo = valor.replace(/[^0-9.,]/g, "").replace(",", ".");
-          novasMedicoes[medicaoIndex] = valorLimpo;
+          // Usa a função de formatação de números da pasta utils
+          // Permite apenas números e pontos decimais (não vírgulas)
+          const valorFormatado = formatNumberInput(valor);
+          novasMedicoes[medicaoIndex] = valorFormatado;
           return { ...ponto, medicoes: novasMedicoes };
         }
         return ponto;
       })
     );
-  };
-
-  // Função para realizar os cálculos de calibração para todos os pontos
+  }; // Função para realizar os cálculos de calibração para todos os pontos
   const calcularResultados = () => {
+    // Teste com valores específicos da planilha fornecida
+    if (process.env.NODE_ENV !== "production") {
+      console.log("--- Teste com valores da planilha fornecida ---");
+
+      // Fator Z da planilha
+      const testeFatorZ = 1.0043; // Z factor μl/mg da planilha
+      console.log("Fator Z:", testeFatorZ);
+
+      // Teste para volume 100,00 μL
+      const valoresVol1 = [99.4, 99.5]; // Valores da coluna [mg]
+      const volNominal1 = 100.0;
+      const mediaMassaVol1 =
+        valoresVol1.reduce((sum, val) => sum + val, 0) / valoresVol1.length;
+      const mediaVolumeVol1 = mediaMassaVol1 * testeFatorZ;
+      const accuracyVol1 = mediaVolumeVol1 - volNominal1;
+      const accuracyPctVol1 = (accuracyVol1 / volNominal1) * 100;
+
+      // Volumes individuais e desvio padrão para volume 100,00
+      const volumesVol1 = valoresVol1.map((massa) => massa * testeFatorZ);
+      const somaQuadradosVol1 = volumesVol1.reduce(
+        (sum, vol) => sum + Math.pow(vol - mediaVolumeVol1, 2),
+        0
+      );
+      const precisaoVol1 = Math.sqrt(
+        somaQuadradosVol1 / (volumesVol1.length - 1)
+      );
+      const precisaoPctVol1 = (precisaoVol1 / mediaVolumeVol1) * 100;
+
+      console.log("\nVolume 1 (100,00 μL):");
+      console.log(
+        "Média massa:",
+        mediaMassaVol1.toFixed(2),
+        "mg (Planilha: 99,45)"
+      );
+      console.log(
+        "Mean Volume:",
+        mediaVolumeVol1.toFixed(2),
+        "μL (Planilha: 99,88)"
+      );
+      console.log("Accuracy:", accuracyVol1.toFixed(2), "μL (Planilha: -0,12)");
+      console.log(
+        "Accuracy %:",
+        accuracyPctVol1.toFixed(2),
+        "% (Planilha: -0,12%)"
+      );
+      console.log(
+        "Precision (SD):",
+        precisaoVol1.toFixed(2),
+        "μL (Planilha: 0,07)"
+      );
+      console.log(
+        "Precision (CV):",
+        precisaoPctVol1.toFixed(2),
+        "% (Planilha: 0,07%)"
+      );
+
+      // Teste para volume 500,00 μL
+      const valoresVol2 = [495.6, 495.7]; // Valores da coluna [mg]
+      const volNominal2 = 500.0;
+      const mediaMassaVol2 =
+        valoresVol2.reduce((sum, val) => sum + val, 0) / valoresVol2.length;
+      const mediaVolumeVol2 = mediaMassaVol2 * testeFatorZ;
+      const accuracyVol2 = mediaVolumeVol2 - volNominal2;
+      const accuracyPctVol2 = (accuracyVol2 / volNominal2) * 100;
+
+      // Volumes individuais e desvio padrão para volume 500,00
+      const volumesVol2 = valoresVol2.map((massa) => massa * testeFatorZ);
+      const somaQuadradosVol2 = volumesVol2.reduce(
+        (sum, vol) => sum + Math.pow(vol - mediaVolumeVol2, 2),
+        0
+      );
+      const precisaoVol2 = Math.sqrt(
+        somaQuadradosVol2 / (volumesVol2.length - 1)
+      );
+      const precisaoPctVol2 = (precisaoVol2 / mediaVolumeVol2) * 100;
+
+      console.log("\nVolume 2 (500,00 μL):");
+      console.log(
+        "Média massa:",
+        mediaMassaVol2.toFixed(2),
+        "mg (Planilha: 495,65)"
+      );
+      console.log(
+        "Mean Volume:",
+        mediaVolumeVol2.toFixed(2),
+        "μL (Planilha: 497,78)"
+      );
+      console.log("Accuracy:", accuracyVol2.toFixed(2), "μL (Planilha: -2,22)");
+      console.log(
+        "Accuracy %:",
+        accuracyPctVol2.toFixed(2),
+        "% (Planilha: -0,44%)"
+      );
+      console.log(
+        "Precision (SD):",
+        precisaoVol2.toFixed(2),
+        "μL (Planilha: 0,07)"
+      );
+      console.log(
+        "Precision (CV):",
+        precisaoPctVol2.toFixed(2),
+        "% (Planilha: 0,01%)"
+      );
+
+      // Teste para volume 1000,00 μL
+      const valoresVol3 = [995.5, 995.3]; // Valores da coluna [mg]
+      const volNominal3 = 1000.0;
+      const mediaMassaVol3 =
+        valoresVol3.reduce((sum, val) => sum + val, 0) / valoresVol3.length;
+      const mediaVolumeVol3 = mediaMassaVol3 * testeFatorZ;
+      const accuracyVol3 = mediaVolumeVol3 - volNominal3;
+      const accuracyPctVol3 = (accuracyVol3 / volNominal3) * 100;
+
+      // Volumes individuais e desvio padrão para volume 1000,00
+      const volumesVol3 = valoresVol3.map((massa) => massa * testeFatorZ);
+      const somaQuadradosVol3 = volumesVol3.reduce(
+        (sum, vol) => sum + Math.pow(vol - mediaVolumeVol3, 2),
+        0
+      );
+      const precisaoVol3 = Math.sqrt(
+        somaQuadradosVol3 / (volumesVol3.length - 1)
+      );
+      const precisaoPctVol3 = (precisaoVol3 / mediaVolumeVol3) * 100;
+
+      console.log("\nVolume 3 (1000,00 μL):");
+      console.log(
+        "Média massa:",
+        mediaMassaVol3.toFixed(2),
+        "mg (Planilha: 995,40)"
+      );
+      console.log(
+        "Mean Volume:",
+        mediaVolumeVol3.toFixed(2),
+        "μL (Planilha: 999,68)"
+      );
+      console.log("Accuracy:", accuracyVol3.toFixed(2), "μL (Planilha: -0,32)");
+      console.log(
+        "Accuracy %:",
+        accuracyPctVol3.toFixed(2),
+        "% (Planilha: -0,03%)"
+      );
+      console.log(
+        "Precision (SD):",
+        precisaoVol3.toFixed(2),
+        "μL (Planilha: 0,14)"
+      );
+      console.log(
+        "Precision (CV):",
+        precisaoPctVol3.toFixed(2),
+        "% (Planilha: 0,01%)"
+      );
+
+      console.log("------------------------------------------");
+    }
+
     setPontosCalibra(
       pontosCalibra.map((ponto) => {
         // Filtra as medições válidas (não vazias e convertidas para número)
@@ -279,10 +460,11 @@ const EmitirCertificadoPage = () => {
           return {
             ...ponto,
             media: null,
+            mediaMassa: null,
             inexatidao: null,
             inexatidaoPercentual: null,
-            incerteza: null,
-            incertezaPercentual: null,
+            desvioPadrao: null,
+            coeficienteVariacao: null,
           };
         }
 
@@ -290,44 +472,46 @@ const EmitirCertificadoPage = () => {
         const volumeNominalNum = parseFloat(ponto.volumeNominal);
         if (isNaN(volumeNominalNum)) return ponto;
 
-        // 1. Cálculo da média das medições (massa)
+        // 1. Calcular a média das massas (mg)
         const mediaMassa =
           medicoesValidas.reduce((sum, val) => sum + val, 0) /
           medicoesValidas.length;
 
-        // Aplicação do fator Z para converter massa em volume
-        const mediaVolume = mediaMassa / fatorZ;
+        // 2. Converter cada medição individual de massa (mg) para volume (µL)
+        const volumesIndividuais = medicoesValidas.map(
+          (massa) => massa * fatorZ
+        );
 
-        // 2. Cálculo da inexatidão (desvio da indicação)
+        // 3. Calcular a média dos volumes convertidos
+        const mediaVolume =
+          volumesIndividuais.reduce((sum, vol) => sum + vol, 0) /
+          volumesIndividuais.length;
+
+        // 4. Calcular exatidão (accuracy)
         const inexatidao = mediaVolume - volumeNominalNum;
         const inexatidaoPercentual = (inexatidao / volumeNominalNum) * 100;
 
-        // 3. Cálculo do desvio padrão
-        const somaDosQuadradosDasDiferencas = medicoesValidas.reduce(
-          (sum, val) => {
-            const volumeEquivalente = val / fatorZ;
-            return sum + Math.pow(volumeEquivalente - mediaVolume, 2);
-          },
+        // 5. Calcular precisão (desvio padrão - SD) diretamente nos volumes convertidos
+        const somaDosQuadradosDasDiferencas = volumesIndividuais.reduce(
+          (sum, vol) => sum + Math.pow(vol - mediaVolume, 2),
           0
         );
 
         const desvioPadrao = Math.sqrt(
-          somaDosQuadradosDasDiferencas / (medicoesValidas.length - 1)
+          somaDosQuadradosDasDiferencas / (volumesIndividuais.length - 1)
         );
 
-        // 4. Cálculo da incerteza da medição (k=2 para 95% de confiança)
-        const incerteza = 2 * desvioPadrao;
-        const incertezaPercentual = (incerteza / volumeNominalNum) * 100;
-
+        // 6. Cálculo do CV (Coeficiente de Variação)
+        const coeficienteVariacao =
+          mediaVolume !== 0 ? (desvioPadrao / mediaVolume) * 100 : 0; // Arredonda para duas casas decimais antes de armazenar
         return {
           ...ponto,
-          media: mediaVolume,
-          mediaMassa,
-          inexatidao: inexatidao,
-          inexatidaoPercentual: inexatidaoPercentual,
-          incerteza: incerteza,
-          incertezaPercentual: incertezaPercentual,
-          desvioPadrao,
+          media: parseFloat(mediaVolume.toFixed(2)),
+          mediaMassa: parseFloat(mediaMassa.toFixed(2)),
+          inexatidao: parseFloat(inexatidao.toFixed(2)),
+          inexatidaoPercentual: parseFloat(inexatidaoPercentual.toFixed(2)),
+          desvioPadrao: parseFloat(desvioPadrao.toFixed(2)),
+          coeficienteVariacao: parseFloat(coeficienteVariacao.toFixed(2)),
         };
       })
     );
@@ -338,11 +522,20 @@ const EmitirCertificadoPage = () => {
     calcularResultados();
   }, [pontosCalibra.map((p) => p.medicoes.join()).join(), fatorZ]);
 
-  // Função para calcular a média das medições
-  const calcularMedia = (medicoes) => {
+  // Função para calcular a média das medições, com opção de conversão
+  const calcularMedia = (medicoes, fatorConversao = null) => {
     const valoresNumericos = medicoes
       .filter((med) => med !== "")
-      .map((med) => parseFloat(med));
+      .map((med) => {
+        const valor = parseFloat(med);
+        // Se um fator de conversão for fornecido, aplicar a cada valor
+        return !isNaN(valor)
+          ? fatorConversao
+            ? valor * fatorConversao
+            : valor
+          : null;
+      })
+      .filter((val) => val !== null);
 
     if (valoresNumericos.length === 0) return null;
 
@@ -351,12 +544,21 @@ const EmitirCertificadoPage = () => {
   };
 
   // Função para calcular o desvio padrão
-  const calcularDesvioPadrao = (medicoes, media) => {
+  const calcularDesvioPadrao = (medicoes, media, fatorConversao = null) => {
     if (media === null) return null;
 
     const valoresNumericos = medicoes
       .filter((med) => med !== "")
-      .map((med) => parseFloat(med));
+      .map((med) => {
+        const valor = parseFloat(med);
+        // Se um fator de conversão for fornecido, aplicar a cada valor
+        return !isNaN(valor)
+          ? fatorConversao
+            ? valor * fatorConversao
+            : valor
+          : null;
+      })
+      .filter((val) => val !== null);
 
     if (valoresNumericos.length <= 1) return 0;
 
@@ -369,7 +571,6 @@ const EmitirCertificadoPage = () => {
       somaDosQuadradosDasDiferencas / (valoresNumericos.length - 1)
     );
   };
-
   // Função para adicionar novo ponto de calibração
   const adicionarPonto = () => {
     setPontosCalibra([
@@ -380,164 +581,347 @@ const EmitirCertificadoPage = () => {
         unidade: "µL",
         medicoes: Array(10).fill(""),
         media: null,
+        mediaMassa: null,
         inexatidao: null,
         inexatidaoPercentual: null,
-        incerteza: null,
-        incertezaPercentual: null,
+        desvioPadrao: null,
       },
     ]);
+  }; // Função para mostrar diálogo de confirmação de remoção
+  const confirmarRemoverPonto = (id, numeroPonto) => {
+    if (pontosCalibra.length <= 1) {
+      setConfirmDialog({
+        isOpen: true,
+        title: "Não é possível remover",
+        message: "É necessário ter pelo menos um ponto de calibração.",
+        pontoId: null,
+        type: "info",
+      });
+      return;
+    }
+
+    setConfirmDialog({
+      isOpen: true,
+      title: "Remover ponto de calibração",
+      message: `Tem certeza que deseja remover o ponto de calibração #${numeroPonto}?`,
+      pontoId: id,
+      type: "warning",
+    });
   };
 
   // Função para remover um ponto de calibração
   const removerPonto = (id) => {
-    if (pontosCalibra.length <= 1) return;
     setPontosCalibra(pontosCalibra.filter((ponto) => ponto.id !== id));
-  };
-
-  // Função para atualizar as medições de um ponto específico
+    // Fecha o modal de confirmação
+    setConfirmDialog({ ...confirmDialog, isOpen: false });
+  }; // Função para atualizar as medições de um ponto específico
   const handleMedicaoChange = (pontoId, indice, valor) => {
     setPontosCalibra(
       pontosCalibra.map((ponto) => {
         if (ponto.id === pontoId) {
           const novasMedicoes = [...ponto.medicoes];
-          novasMedicoes[indice] = valor;
 
-          // Calcular a média
-          const media = calcularMedia(novasMedicoes);
+          // Usa a função de formatação de números da pasta utils
+          const valorFormatado = formatNumberInput(valor);
 
-          // Calcular inexatidão (se o volume nominal estiver definido)
+          novasMedicoes[indice] = valorFormatado;
+
+          // Filtrar medições válidas
+          const medicoesValidas = novasMedicoes
+            .map((m) => parseFloat(m))
+            .filter((m) => !isNaN(m));
+
+          // Calcular média de massa
+          const mediaMassa =
+            medicoesValidas.length > 0
+              ? medicoesValidas.reduce((sum, val) => sum + val, 0) /
+                medicoesValidas.length
+              : null;
+
+          // Converter cada medição para volume e calcular média
+          let media = null;
+          let volumesIndividuais = [];
+
+          if (mediaMassa !== null) {
+            // Converter cada medição individual de massa para volume
+            volumesIndividuais = medicoesValidas.map((massa) => massa * fatorZ);
+
+            // Calcular a média dos volumes
+            media =
+              volumesIndividuais.reduce((sum, vol) => sum + vol, 0) /
+              volumesIndividuais.length;
+          }
+
+          // Calcular exatidão/accuracy (se o volume nominal estiver definido)
           let inexatidao = null;
           let inexatidaoPercentual = null;
+
           if (media !== null && ponto.volumeNominal !== "") {
             const volumeNominal = parseFloat(ponto.volumeNominal);
             inexatidao = media - volumeNominal;
             inexatidaoPercentual = (inexatidao / volumeNominal) * 100;
           }
 
-          // Calcular a incerteza (k=2 para nível de confiança de 95%)
-          const desvioPadrao = calcularDesvioPadrao(novasMedicoes, media);
-          let incerteza = null;
-          let incertezaPercentual = null;
-          if (desvioPadrao !== null && ponto.volumeNominal !== "") {
-            incerteza = 2 * desvioPadrao; // k=2 para 95% de confiança
-            const volumeNominal = parseFloat(ponto.volumeNominal);
-            incertezaPercentual = (incerteza / volumeNominal) * 100;
-          }
+          // Calcular a precisão (desvio padrão) diretamente dos volumes individuais
+          let desvioPadrao = null;
+          let coeficienteVariacao = null;
 
+          if (volumesIndividuais.length > 1 && media !== null) {
+            const somaDosQuadradosDasDiferencas = volumesIndividuais.reduce(
+              (sum, vol) => sum + Math.pow(vol - media, 2),
+              0
+            );
+
+            desvioPadrao = Math.sqrt(
+              somaDosQuadradosDasDiferencas / (volumesIndividuais.length - 1)
+            );
+
+            // Cálculo do CV (Coeficiente de Variação)
+            coeficienteVariacao =
+              media !== 0 ? (desvioPadrao / media) * 100 : 0;
+          }
           return {
             ...ponto,
             medicoes: novasMedicoes,
-            media,
-            inexatidao,
-            inexatidaoPercentual,
-            incerteza,
-            incertezaPercentual,
+            media: media !== null ? parseFloat(media.toFixed(2)) : null,
+            mediaMassa:
+              mediaMassa !== null ? parseFloat(mediaMassa.toFixed(2)) : null,
+            inexatidao:
+              inexatidao !== null ? parseFloat(inexatidao.toFixed(2)) : null,
+            inexatidaoPercentual:
+              inexatidaoPercentual !== null
+                ? parseFloat(inexatidaoPercentual.toFixed(2))
+                : null,
+            desvioPadrao:
+              desvioPadrao !== null
+                ? parseFloat(desvioPadrao.toFixed(2))
+                : null,
+            coeficienteVariacao:
+              coeficienteVariacao !== null
+                ? parseFloat(coeficienteVariacao.toFixed(2))
+                : null,
           };
         }
         return ponto;
       })
     );
   };
-
   // Função para atualizar o volume nominal de um ponto
   const handleVolumeNominalChange = (pontoId, valor) => {
+    // Usa a função de formatação de números da pasta utils
+    const valorFormatado = formatNumberInput(valor);
+
     setPontosCalibra(
       pontosCalibra.map((ponto) => {
         if (ponto.id === pontoId) {
-          // Recalcular dados com o novo volume nominal
-          const media = calcularMedia(ponto.medicoes);
+          // Filtrar medições válidas
+          const medicoesValidas = ponto.medicoes
+            .map((m) => parseFloat(m))
+            .filter((m) => !isNaN(m));
 
-          // Calcular inexatidão
+          // Calcular média de massa
+          const mediaMassa =
+            medicoesValidas.length > 0
+              ? medicoesValidas.reduce((sum, val) => sum + val, 0) /
+                medicoesValidas.length
+              : null;
+
+          // Converter cada medição para volume e calcular média
+          let media = null;
+          let volumesIndividuais = [];
+
+          if (mediaMassa !== null) {
+            // Converter cada medição individual de massa para volume
+            volumesIndividuais = medicoesValidas.map((massa) => massa * fatorZ);
+
+            // Calcular a média dos volumes
+            media =
+              volumesIndividuais.reduce((sum, vol) => sum + vol, 0) /
+              volumesIndividuais.length;
+          }
+
+          // Calcular inexatidão baseada no novo volume nominal
           let inexatidao = null;
           let inexatidaoPercentual = null;
-          if (media !== null && valor !== "") {
-            const volumeNominal = parseFloat(valor);
+
+          if (media !== null && valorFormatado !== "") {
+            const volumeNominal = parseFloat(valorFormatado);
             inexatidao = media - volumeNominal;
             inexatidaoPercentual = (inexatidao / volumeNominal) * 100;
           }
 
-          // Calcular a incerteza
-          const desvioPadrao = calcularDesvioPadrao(ponto.medicoes, media);
-          let incerteza = null;
-          let incertezaPercentual = null;
-          if (desvioPadrao !== null && valor !== "") {
-            incerteza = 2 * desvioPadrao; // k=2 para 95% de confiança
-            const volumeNominal = parseFloat(valor);
-            incertezaPercentual = (incerteza / volumeNominal) * 100;
-          }
+          // Calcular a precisão (desvio padrão) diretamente dos volumes individuais
+          let desvioPadrao = null;
+          let coeficienteVariacao = null;
 
+          if (volumesIndividuais.length > 1 && media !== null) {
+            const somaDosQuadradosDasDiferencas = volumesIndividuais.reduce(
+              (sum, vol) => sum + Math.pow(vol - media, 2),
+              0
+            );
+
+            desvioPadrao = Math.sqrt(
+              somaDosQuadradosDasDiferencas / (volumesIndividuais.length - 1)
+            );
+
+            // Cálculo do CV (Coeficiente de Variação) - presente na planilha como Precision (CV)
+            coeficienteVariacao =
+              media !== null && media !== 0 ? (desvioPadrao / media) * 100 : 0;
+          }
           return {
             ...ponto,
-            volumeNominal: valor,
-            media,
-            inexatidao,
-            inexatidaoPercentual,
-            incerteza,
-            incertezaPercentual,
+            volumeNominal: valorFormatado,
+            media: media !== null ? parseFloat(media.toFixed(2)) : null,
+            mediaMassa:
+              mediaMassa !== null ? parseFloat(mediaMassa.toFixed(2)) : null,
+            inexatidao:
+              inexatidao !== null ? parseFloat(inexatidao.toFixed(2)) : null,
+            inexatidaoPercentual:
+              inexatidaoPercentual !== null
+                ? parseFloat(inexatidaoPercentual.toFixed(2))
+                : null,
+            desvioPadrao:
+              desvioPadrao !== null
+                ? parseFloat(desvioPadrao.toFixed(2))
+                : null,
+            coeficienteVariacao:
+              coeficienteVariacao !== null
+                ? parseFloat(coeficienteVariacao.toFixed(2))
+                : null,
           };
         }
         return ponto;
       })
     );
-  };
-
-  if (loading) {
+  };  if (loading) {
     return (
-      <div className="p-6 max-w-6xl mx-auto bg-white rounded-lg shadow-md">
-        <div className="text-center p-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500 mx-auto"></div>
-          <p className="mt-3 text-gray-600">Carregando dados do cliente...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-6 max-w-6xl mx-auto bg-white rounded-lg shadow-md">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-md mb-4">
-          {error}
-        </div>
-        <button
-          className="text-green-700 hover:text-green-900 flex items-center"
-          onClick={() => navigate("/selecionar-cliente")}
+      <div
+        className="min-h-screen w-full p-6"
+        style={{
+          backgroundColor: "rgb(249, 250, 251)",
+          paddingTop: "2rem",
+          paddingBottom: "2rem",
+        }}
+      >
+        <div
+          className="p-6 max-w-4xl mx-auto"
+          style={{
+            background: "rgba(255, 255, 255, 0.95)",
+            borderRadius: "20px",
+            boxShadow:
+              "0 20px 40px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.05)",
+            backdropFilter: "blur(10px)",
+            border: "1px solid rgba(255, 255, 255, 0.2)",
+          }}
         >
-          <FaArrowLeft className="mr-2" /> Voltar para Seleção de Clientes
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="p-6 max-w-6xl mx-auto bg-white rounded-lg shadow-md">
-      <div className="flex justify-between items-center mb-6">
-        <button
-          className="text-green-700 hover:text-green-900 flex items-center"
-          onClick={() => navigate("/selecionar-cliente")}
-        >
-          <FaArrowLeft className="mr-2" /> Voltar
-        </button>
-        <h1 className="text-2xl font-bold text-center text-green-800">
-          Emissão de Certificado
-        </h1>
-        <div>{/* Espaço para equilibrar o layout */}</div>
-      </div>
-
-      <div className="bg-gray-50 p-4 rounded-md border border-gray-200 mb-6">
-        <h3 className="text-lg font-semibold text-gray-700 mb-2">
-          Dados do Cliente
-        </h3>
-        <div className="grid grid-cols-1 gap-2">
-          <div>
-            <span className="font-medium">Empresa:</span>{" "}
-            {cliente?.nome || "N/A"}
-          </div>
-          <div>
-            <span className="font-medium">Endereço:</span>{" "}
-            {renderEnderecoCompleto()}
+          <div className="text-center p-4">
+            <div
+              className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 mx-auto"
+              style={{
+                borderTopColor: "rgb(144, 199, 45)",
+                borderBottomColor: "rgb(144, 199, 45)",
+              }}
+            ></div>
+            <p className="mt-3" style={{ color: "rgb(75, 85, 99)" }}>
+              Carregando dados do cliente...
+            </p>
           </div>
         </div>
       </div>
+    );
+  }  if (error) {
+    return (
+      <div
+        className="min-h-screen w-full p-6"
+        style={{
+          backgroundColor: "rgb(249, 250, 251)",
+          paddingTop: "2rem",
+          paddingBottom: "2rem",
+        }}
+      >
+        <div
+          className="w-full max-w-4xl mx-auto"
+          style={{
+            background: "rgba(255, 255, 255, 0.95)",
+            borderRadius: "20px",
+            boxShadow:
+              "0 20px 40px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.05)",
+            backdropFilter: "blur(10px)",
+            border: "1px solid rgba(255, 255, 255, 0.2)",
+            padding: "2rem",
+            position: "relative",
+            zIndex: 1,
+          }}
+        >
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-md mb-4">
+            {error}
+          </div>
+          <button
+            className="flex items-center hover:opacity-80"
+            style={{ color: "rgb(144, 199, 45)" }}
+            onClick={() => navigate("/selecionar-cliente")}
+          >
+            <ArrowLeft className="mr-2" /> Voltar
+          </button>
+        </div>
+      </div>
+    );
+  }  return (
+    <div
+      className="min-h-screen w-full p-6"
+      style={{
+        backgroundColor: "rgb(249, 250, 251)",
+        paddingTop: "2rem",
+        paddingBottom: "2rem",
+      }}
+    >
+      <div
+        className="w-full max-w-6xl mx-auto"
+        style={{
+          background: "rgba(255, 255, 255, 0.95)",
+          borderRadius: "20px",
+          boxShadow:
+            "0 20px 40px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.05)",
+          backdropFilter: "blur(10px)",
+          border: "1px solid rgba(255, 255, 255, 0.2)",
+          padding: "2rem",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
+        <div className="flex justify-between items-center mb-6">
+          <button
+            className="flex items-center hover:opacity-80"
+            style={{ color: "rgb(144, 199, 45)" }}
+            onClick={() => navigate("/selecionar-cliente")}
+          >
+            <ArrowLeft className="mr-2" /> Voltar
+          </button>
+          <h1
+            className="text-2xl font-bold text-center"
+            style={{ color: "rgb(144, 199, 45)" }}
+          >
+            Emissão de Certificado
+          </h1>
+          <div>{/* Espaço para equilibrar o layout */}</div>
+        </div>        <div className="bg-gray-50 p-4 rounded-md border border-gray-200 mb-6">
+          <h3 
+            className="text-lg font-semibold mb-2"
+            style={{ color: "rgb(75, 85, 99)" }}
+          >
+            Dados do Cliente
+          </h3>
+          <div className="grid grid-cols-1 gap-2">
+            <div>
+              <span className="font-medium">Empresa:</span>{" "}
+              {cliente?.nome || "N/A"}
+            </div>
+            <div>
+              <span className="font-medium">Endereço:</span>{" "}
+              {renderEnderecoCompleto()}
+            </div>
+          </div>
+        </div>
 
       {certificadoGerado ? (
         <div className="text-center">
@@ -546,56 +930,83 @@ const EmitirCertificadoPage = () => {
           </div>
 
           <div className="mb-6 p-8 border-2 border-dashed border-gray-300 rounded-lg">
-            <FaFilePdf className="text-6xl text-red-600 mx-auto mb-4" />
+            <FileText className="text-6xl text-red-600 mx-auto mb-4" />
             <p className="text-xl font-semibold mb-2">
               Certificado de Calibração
             </p>
             <p className="mb-2">Número: {formData.numeroCertificado}</p>
-            <p className="mb-2">Cliente: {cliente?.nome}</p>
+            <p className="mb-2">Cliente: {cliente?.nome}</p>{" "}
             <p className="mb-2">
               Micropipeta: {formData.marcaPipeta} {formData.modeloPipeta}
             </p>
             <p className="mb-2">Número de Série: {formData.numeroPipeta}</p>
+            <p className="mb-2">
+              Tipo de Instrumento:{" "}
+              {formData.tipoInstrumento === "monocanal"
+                ? "Monocanal"
+                : "Multicanal"}
+            </p>
             <p className="mb-2">Temperatura: {formData.temperatura} °C</p>
             <p className="mb-2">
               Umidade Relativa: {formData.umidadeRelativa}%
             </p>
             <p className="mb-2">Fator Z: {fatorZ.toFixed(4)}</p>
-            <p className="mb-4">Emissão: {new Date().toLocaleDateString()}</p>
-
-            <button
+            <p className="mb-4">Emissão: {new Date().toLocaleDateString()}</p>            <button
               onClick={handleDownloadCertificado}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center justify-center mx-auto"
+              className="text-white px-4 py-2 rounded-md flex items-center justify-center mx-auto focus:outline-none focus:ring-2"
+              style={{
+                backgroundColor: "rgb(144, 199, 45)",
+                "--tw-ring-color": "rgb(144, 199, 45)",
+              }}
+              onMouseEnter={(e) =>
+                (e.target.style.backgroundColor = "rgb(130, 180, 40)")
+              }
+              onMouseLeave={(e) =>
+                (e.target.style.backgroundColor = "rgb(144, 199, 45)")
+              }
             >
-              <FaDownload className="mr-2" /> Baixar Certificado
+              <Download className="mr-2" /> Baixar Certificado
             </button>
-          </div>
-
-          <button
+          </div>          <button
             onClick={() => setCertificadoGerado(false)}
-            className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg mr-2"
+            className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 mr-2"
+            style={{ color: "rgb(75, 85, 99)" }}
           >
             Editar Dados
           </button>
 
           <button
             onClick={() => navigate("/selecionar-cliente")}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg ml-2"
+            className="text-white px-4 py-2 rounded-md ml-2 focus:outline-none focus:ring-2"
+            style={{
+              backgroundColor: "rgb(144, 199, 45)",
+              "--tw-ring-color": "rgb(144, 199, 45)",
+            }}
+            onMouseEnter={(e) =>
+              (e.target.style.backgroundColor = "rgb(130, 180, 40)")
+            }
+            onMouseLeave={(e) =>
+              (e.target.style.backgroundColor = "rgb(144, 199, 45)")
+            }
           >
             Novo Certificado
           </button>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-700 mb-3">
+        <form onSubmit={handleSubmit} className="space-y-6">          <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+            <h3 
+              className="text-lg font-semibold mb-3"
+              style={{ color: "rgb(75, 85, 99)" }}
+            >
               Dados do Certificado
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                {" "}
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                {" "}                <label 
+                  className="block text-sm font-medium mb-1"
+                  style={{ color: "rgb(75, 85, 99)" }}
+                >
                   Número do Certificado
                 </label>
                 <input
@@ -604,12 +1015,19 @@ const EmitirCertificadoPage = () => {
                   value={formData.numeroCertificado}
                   onChange={handleChange}
                   placeholder="Ex: 8550.1"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                  style={{
+                    "--tw-ring-color": "rgb(144, 199, 45)",
+                    color: "rgb(75, 85, 99)",
+                  }}
                   required
                 />
               </div>{" "}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                {" "}                <label 
+                  className="block text-sm font-medium mb-1"
+                  style={{ color: "rgb(75, 85, 99)" }}
+                >
                   Data da Calibração
                 </label>
                 <input
@@ -617,22 +1035,30 @@ const EmitirCertificadoPage = () => {
                   name="dataCalibracao"
                   value={formData.dataCalibracao}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="Selecione a data da calibração"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                  style={{
+                    "--tw-ring-color": "rgb(144, 199, 45)",
+                    color: "rgb(75, 85, 99)",
+                  }}
                   required
                 />
               </div>
             </div>
-          </div>
-
-          <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-700 mb-3">
+          </div>          <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+            <h3 
+              className="text-lg font-semibold mb-3"
+              style={{ color: "rgb(75, 85, 99)" }}
+            >
               Condições Ambientais
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
-                  <FaThermometerHalf className="mr-2 text-red-500" />
+              <div>                <label 
+                  className="flex text-sm font-medium mb-1 items-center"
+                  style={{ color: "rgb(75, 85, 99)" }}
+                >
+                  <Thermometer className="mr-2 text-red-500" />
                   Temperatura (°C)
                 </label>
                 <div className="relative flex items-center">
@@ -652,7 +1078,11 @@ const EmitirCertificadoPage = () => {
                       const ajustado = ajustarTemperatura(e.target.value);
                       setFormData({ ...formData, temperatura: ajustado });
                     }}
-                    className="w-full px-3 py-2 border-y border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 text-center"
+                    className="w-full px-3 py-2 border-y border-gray-300 focus:outline-none focus:ring-2 text-center"
+                    style={{
+                      "--tw-ring-color": "rgb(144, 199, 45)",
+                      color: "rgb(75, 85, 99)",
+                    }}
                     step="0.5"
                     min="15.0"
                     max="30.0"
@@ -671,10 +1101,6 @@ const EmitirCertificadoPage = () => {
                     Fator Z atual:{" "}
                     <span className="text-green-600">{fatorZ.toFixed(4)}</span>
                   </div>
-                  <p className="text-xs text-gray-600">
-                    Este fator será usado nos cálculos de calibração. Valor
-                    recomendado: 20.0°C (Z=1.0029)
-                  </p>
                 </div>
                 <div className="mt-2 grid grid-cols-5 gap-1 text-center text-xs">
                   {[15, 17.5, 20, 22.5, 25].map((temp) => (
@@ -697,44 +1123,43 @@ const EmitirCertificadoPage = () => {
                     </button>
                   ))}
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
-                  <FaTint className="mr-2 text-blue-500" />
-                  Umidade Relativa (%)
+              </div>{" "}
+              <div>                <label 
+                  className="flex text-sm font-medium mb-1 items-center"
+                  style={{ color: "rgb(75, 85, 99)" }}
+                >
+                  <Droplet className="mr-2 text-blue-500" />
+                  Umidade Relativa do Ar (%)
                 </label>
                 <input
                   type="number"
                   name="umidadeRelativa"
                   value={formData.umidadeRelativa}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                  style={{
+                    "--tw-ring-color": "rgb(144, 199, 45)",
+                    color: "rgb(75, 85, 99)",
+                  }}
                   min="30"
                   max="90"
                   required
                 />
               </div>
             </div>
-
-            <div className="bg-blue-50 p-2 rounded-md mt-3 text-sm text-blue-700">
-              <p>
-                <strong>Nota:</strong> A temperatura deve ser selecionada em
-                incrementos de 0.5°C (ex: 20.0, 20.5, 21.0). O fator Z é
-                atualizado automaticamente de acordo com a temperatura
-                selecionada.
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-700 mb-3">
+          </div>          <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+            <h3 
+              className="text-lg font-semibold mb-3"
+              style={{ color: "rgb(75, 85, 99)" }}
+            >
               Dados da Micropipeta
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">              <div>
+                <label 
+                  className="block text-sm font-medium mb-1"
+                  style={{ color: "rgb(75, 85, 99)" }}
+                >
                   Marca da Pipeta
                 </label>
                 <input
@@ -742,14 +1167,20 @@ const EmitirCertificadoPage = () => {
                   name="marcaPipeta"
                   value={formData.marcaPipeta}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                  style={{
+                    "--tw-ring-color": "rgb(144, 199, 45)",
+                    color: "rgb(75, 85, 99)",
+                  }}
                   required
                   placeholder="Ex: Eppendorf, Gilson, HTL, etc."
                 />
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label 
+                  className="block text-sm font-medium mb-1"
+                  style={{ color: "rgb(75, 85, 99)" }}
+                >
                   Modelo da Pipeta
                 </label>
                 <input
@@ -757,14 +1188,19 @@ const EmitirCertificadoPage = () => {
                   name="modeloPipeta"
                   value={formData.modeloPipeta}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                  style={{
+                    "--tw-ring-color": "rgb(144, 199, 45)",
+                    color: "rgb(75, 85, 99)",
+                  }}
                   required
                   placeholder="Ex: P1000, Research Plus, etc."
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+              </div>              <div>
+                <label 
+                  className="block text-sm font-medium mb-1"
+                  style={{ color: "rgb(75, 85, 99)" }}
+                >
                   Número/Série da Pipeta
                 </label>
                 <input
@@ -772,14 +1208,19 @@ const EmitirCertificadoPage = () => {
                   name="numeroPipeta"
                   value={formData.numeroPipeta}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                  style={{
+                    "--tw-ring-color": "rgb(144, 199, 45)",
+                    color: "rgb(75, 85, 99)",
+                  }}
                   required
                   placeholder="Ex: AJ12345"
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+              </div>{" "}              <div>
+                <label 
+                  className="block text-sm font-medium mb-1"
+                  style={{ color: "rgb(75, 85, 99)" }}
+                >
                   Capacidade
                 </label>
                 <div className="flex">
@@ -788,7 +1229,11 @@ const EmitirCertificadoPage = () => {
                     name="capacidade"
                     value={formData.capacidade}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2"
+                    style={{
+                      "--tw-ring-color": "rgb(144, 199, 45)",
+                      color: "rgb(75, 85, 99)",
+                    }}
                     required
                     placeholder="Ex: 1000"
                   />
@@ -796,71 +1241,223 @@ const EmitirCertificadoPage = () => {
                     name="unidadeCapacidade"
                     value={formData.unidadeCapacidade}
                     onChange={handleChange}
-                    className="px-3 py-2 border border-l-0 border-gray-300 rounded-r-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="px-3 py-2 border border-l-0 border-gray-300 rounded-r-md focus:outline-none focus:ring-2"
+                    style={{
+                      "--tw-ring-color": "rgb(144, 199, 45)",
+                      color: "rgb(75, 85, 99)",
+                    }}
                   >
                     <option value="µL">µL</option>
                     <option value="mL">mL</option>
                   </select>
                 </div>
+              </div>              <div>
+                <label 
+                  className="block text-sm font-medium mb-1"
+                  style={{ color: "rgb(75, 85, 99)" }}
+                >
+                  Tipo de Instrumento
+                </label>
+                <div className="flex space-x-4">
+                  <label className="inline-flex items-center">
+                    <input
+                      type="radio"
+                      name="tipoInstrumento"
+                      value="monocanal"
+                      checked={formData.tipoInstrumento === "monocanal"}
+                      onChange={handleChange}
+                      className="form-radio h-5 w-5"
+                      style={{ color: "rgb(144, 199, 45)" }}
+                    />
+                    <span 
+                      className="ml-2"
+                      style={{ color: "rgb(75, 85, 99)" }}
+                    >
+                      Monocanal
+                    </span>
+                  </label>
+                  <label className="inline-flex items-center">
+                    <input
+                      type="radio"
+                      name="tipoInstrumento"
+                      value="multicanal"
+                      checked={formData.tipoInstrumento === "multicanal"}
+                      onChange={handleChange}
+                      className="form-radio h-5 w-5"
+                      style={{ color: "rgb(144, 199, 45)" }}
+                    />
+                    <span 
+                      className="ml-2"
+                      style={{ color: "rgb(75, 85, 99)" }}
+                    >
+                      Multicanal
+                    </span>
+                  </label>
+                </div>
+              </div>              <div>
+                <label 
+                  className="block text-sm font-medium mb-1"
+                  style={{ color: "rgb(75, 85, 99)" }}
+                >
+                  Faixa de Indicação
+                </label>
+                <input
+                  type="text"
+                  name="faixaIndicacao"
+                  value={formData.faixaIndicacao}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                  style={{
+                    "--tw-ring-color": "rgb(144, 199, 45)",
+                    color: "rgb(75, 85, 99)",
+                  }}
+                  placeholder="Ex: 100-1000 µL"
+                />
+              </div>
+              <div>
+                <label 
+                  className="block text-sm font-medium mb-1"
+                  style={{ color: "rgb(75, 85, 99)" }}
+                >
+                  Faixa Calibrada
+                </label>
+                <input
+                  type="text"
+                  name="faixaCalibrada"
+                  value={formData.faixaCalibrada}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                  style={{
+                    "--tw-ring-color": "rgb(144, 199, 45)",
+                    color: "rgb(75, 85, 99)",
+                  }}
+                  placeholder="Ex: 200-1000 µL"
+                />
               </div>
             </div>
           </div>
-
           <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="text-lg font-semibold text-gray-700 flex items-center">
-                <FaChartLine className="mr-2 text-green-600" />
+            {" "}            <div className="flex justify-between items-center mb-3">
+              <h3 
+                className="text-lg font-semibold flex items-center"
+                style={{ color: "rgb(75, 85, 99)" }}
+              >
+                <TrendingUp 
+                  className="mr-2"
+                  style={{ color: "rgb(144, 199, 45)" }}
+                />
                 Pontos de Calibração
               </h3>
 
-              <div>
+              <div className="flex space-x-2">
+                {" "}
                 <button
                   type="button"
-                  className="flex items-center text-sm bg-green-100 hover:bg-green-200 text-green-700 px-3 py-1.5 rounded-md border border-green-300"
-                  onClick={adicionarPonto}
+                  onClick={() => setMostrarNotaCalculos(!mostrarNotaCalculos)}
+                  className={`flex items-center text-sm px-3 py-1.5 rounded-md border transition-colors duration-200 ${
+                    mostrarNotaCalculos
+                      ? "bg-blue-100 text-blue-800 border-blue-300"
+                      : "bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                  }`}
                 >
-                  <FaPlus className="mr-2" /> Adicionar Ponto
+                  {mostrarNotaCalculos ? (
+                    <>
+                      <EyeOff className="mr-1" /> Ocultar Ajuda
+                    </>
+                  ) : (
+                    <>
+                      <Info className="mr-1" /> Como os cálculos são feitos?
+                    </>
+                  )}
+                </button>{" "}                <button
+                  type="button"
+                  className="flex items-center text-sm px-3 py-1.5 rounded-md border border-green-300 transition-colors"
+                  style={{
+                    backgroundColor: "rgb(240, 253, 244)",
+                    color: "rgb(144, 199, 45)",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = "rgb(220, 252, 231)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = "rgb(240, 253, 244)";
+                  }}
+                  onClick={adicionarPonto}
+                  title="Adicionar novo ponto de calibração"
+                >
+                  <Plus className="mr-2" /> Adicionar Ponto
                 </button>
               </div>
-            </div>
-
-            <div className="bg-blue-50 p-2 rounded-md mb-4 text-sm text-blue-700 flex items-start">
-              <FaCalculator className="mr-2 mt-0.5 text-blue-500" />
-              <div>
-                <p>
-                  <strong>Nota sobre os cálculos:</strong>
-                </p>
-                <p>
-                  Os valores devem ser inseridos em <strong>massa (mg)</strong>{" "}
-                  e serão convertidos para <strong>volume (µL)</strong> usando o
-                  fator Z = {fatorZ.toFixed(4)}.
-                </p>
-                <p>Fórmula: Volume = Massa ÷ Fator Z</p>
+            </div>{" "}
+            {mostrarNotaCalculos && (
+              <div className="bg-blue-50 p-3 rounded-md mb-4 text-sm text-blue-700 border border-blue-200 animate-fade-in shadow-sm">
+                <div className="flex items-start">
+                  {" "}
+                  <Calculator className="mr-2 mt-0.5 text-blue-500 flex-shrink-0" />
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center mb-2">
+                      <p className="font-bold text-blue-800">
+                        Nota sobre os cálculos:
+                      </p>
+                      <button
+                        onClick={() => setMostrarNotaCalculos(false)}
+                        className="text-blue-500 hover:text-blue-700 p-1"
+                        title="Fechar"
+                      >
+                        <EyeOff size={14} />
+                      </button>
+                    </div>{" "}
+                    <p>
+                      Os valores devem ser inseridos em{" "}
+                      <strong>massa (mg)</strong> e serão convertidos para{" "}
+                      <strong>volume (µL)</strong> usando o fator Z, que varia
+                      de acordo com a temperatura do ambiente.
+                    </p>
+                    <p>Fórmula: Volume (µL) = Massa (mg) × Fator Z</p>{" "}
+                    <div className="mt-2 border-t border-blue-200 pt-2">
+                      <p className="font-bold text-blue-800 mb-1">
+                        Cálculos realizados:
+                      </p>
+                      <ul className="list-disc ml-4 mt-1">
+                        <li>
+                          <strong>Mean Volume:</strong> Média dos volumes
+                          individuais em <strong>µL</strong> (cada massa × Fator
+                          Z)
+                        </li>
+                        <li>
+                          <strong>Accuracy:</strong> Mean Volume - Volume
+                          Nominal
+                        </li>
+                        <li>
+                          <strong>Accuracy %:</strong> (Accuracy ÷ Volume
+                          Nominal) × 100
+                        </li>
+                        <li>
+                          <strong>Precision (SD):</strong> Desvio padrão dos
+                          volumes individuais
+                        </li>
+                        <li>
+                          <strong>Precision (CV):</strong> (SD ÷ Mean Volume) ×
+                          100%
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-
+            )}
             <div className="space-y-6">
               {pontosCalibra.map((ponto, pontoIndex) => (
                 <div
                   key={ponto.id}
                   className="border border-gray-300 rounded-md p-3 bg-white relative"
                 >
-                  <div className="absolute top-2 right-2">
-                    {pontosCalibra.length > 1 && (
-                      <button
-                        type="button"
-                        className="text-red-500 hover:text-red-700"
-                        onClick={() => removerPonto(ponto.id)}
-                        title="Remover ponto"
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+                    {" "}
+                    <div className="flex-1 min-w-[200px]">                      <label 
+                        className="block text-sm font-medium mb-1"
+                        style={{ color: "rgb(75, 85, 99)" }}
                       >
-                        <FaMinus />
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="mb-4 flex flex-wrap items-center gap-4">
-                    <div className="flex-1 min-w-[200px]">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
                         Volume Nominal
                       </label>
                       <div className="flex">
@@ -871,7 +1468,11 @@ const EmitirCertificadoPage = () => {
                             handleVolumeNominalChange(ponto.id, e.target.value)
                           }
                           placeholder="Volume nominal"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2"
+                          style={{
+                            "--tw-ring-color": "rgb(144, 199, 45)",
+                            color: "rgb(75, 85, 99)",
+                          }}
                           required
                         />
                         <select
@@ -883,25 +1484,43 @@ const EmitirCertificadoPage = () => {
                               e.target.value
                             )
                           }
-                          className="px-3 py-2 border border-l-0 border-gray-300 rounded-r-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                          className="px-3 py-2 border border-l-0 border-gray-300 rounded-r-md focus:outline-none focus:ring-2"
+                          style={{
+                            "--tw-ring-color": "rgb(144, 199, 45)",
+                            color: "rgb(75, 85, 99)",
+                          }}
                         >
                           <option value="µL">µL</option>
                           <option value="mL">mL</option>
                         </select>
                       </div>
                     </div>
-
-                    <div className="flex-grow-0">
+                    <div className="flex items-center gap-2">
                       <div className="px-3 py-2 rounded-md bg-gray-100 text-center border border-gray-200">
                         <span className="text-xs text-gray-500">
                           Ponto #{pontoIndex + 1}
                         </span>
                       </div>
-                    </div>
-                  </div>
 
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {pontosCalibra.length > 1 && (
+                        <button
+                          type="button"
+                          className="flex items-center px-2 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-md border border-red-200 transition-colors"
+                          onClick={() =>
+                            confirmarRemoverPonto(ponto.id, pontoIndex + 1)
+                          }
+                          title="Remover ponto de calibração"
+                        >
+                          <Trash2 className="mr-1" />{" "}
+                          <span className="text-xs">Remover</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>                  <div className="mb-4">
+                    <label 
+                      className="block text-sm font-medium mb-1"
+                      style={{ color: "rgb(75, 85, 99)" }}
+                    >
                       Medições (mg)
                     </label>
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
@@ -914,112 +1533,127 @@ const EmitirCertificadoPage = () => {
                             handleMedicaoChange(ponto.id, index, e.target.value)
                           }
                           placeholder={`M${index + 1}`}
-                          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                          style={{
+                            "--tw-ring-color": "rgb(144, 199, 45)",
+                            color: "rgb(75, 85, 99)",
+                          }}
                         />
                       ))}
                     </div>
-                  </div>
-
+                  </div>{" "}
                   {/* Resultados dos cálculos */}
                   {ponto.media !== null && (
-                    <div className="bg-gray-50 p-3 rounded-md">
-                      <h4 className="font-medium text-gray-700 mb-2 flex items-center">
-                        <FaCalculator className="mr-2 text-green-600" />
+                    <div className="bg-gray-50 p-3 rounded-md">                      <h4 
+                        className="font-medium mb-2 flex items-center"
+                        style={{ color: "rgb(75, 85, 99)" }}
+                      >
+                        <Calculator 
+                          className="mr-2"
+                          style={{ color: "rgb(144, 199, 45)" }}
+                        />
                         Resultados
                       </h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                        {" "}
                         <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
                           <div className="text-xs text-gray-500 mb-1">
-                            Média das Medições
+                            Mean Volume
                           </div>
                           <div className="flex justify-between">
+                            {" "}
                             <span className="font-medium">
-                              {ponto.mediaMassa?.toFixed(4)} mg
+                              {ponto.mediaMassa?.toFixed(2)} mg
                             </span>
-                            <span className="text-green-600">
-                              {ponto.media?.toFixed(4)} µL
+                            <span className="text-green-600 font-medium">
+                              {ponto.media?.toFixed(2)} µL
                             </span>
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            Massa média × Fator Z
                           </div>
                         </div>
                         <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
                           <div className="text-xs text-gray-500 mb-1">
-                            Inexatidão
+                            Accuracy
                           </div>
                           <div className="flex justify-between">
+                            {" "}
                             <span className="font-medium">
-                              {ponto.inexatidao?.toFixed(4)} µL
+                              {ponto.inexatidao?.toFixed(2)} µL
                             </span>
                             <span
                               className={
-                                ponto.inexatidaoPercentual > 5
-                                  ? "text-red-600"
-                                  : "text-green-600"
+                                Math.abs(ponto.inexatidaoPercentual) > 5
+                                  ? "text-red-600 font-medium"
+                                  : "text-green-600 font-medium"
                               }
                             >
                               {ponto.inexatidaoPercentual?.toFixed(2)}%
                             </span>
                           </div>
-                        </div>
-                        <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
-                          <div className="text-xs text-gray-500 mb-1">
-                            Desvio Padrão
+                          <div className="text-xs text-gray-500 mt-1">
+                            Mean Volume - Volume Nominal
                           </div>
-                          <span className="font-medium">
-                            {ponto.desvioPadrao?.toFixed(4)} µL
-                          </span>
-                        </div>
+                        </div>{" "}
                         <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
                           <div className="text-xs text-gray-500 mb-1">
-                            Incerteza (k=2)
+                            Precision
                           </div>
                           <div className="flex justify-between">
+                            {" "}
                             <span className="font-medium">
-                              {ponto.incerteza?.toFixed(4)} µL
+                              SD: {ponto.desvioPadrao?.toFixed(2)} µL
                             </span>
-                            <span
-                              className={
-                                ponto.incertezaPercentual > 5
-                                  ? "text-red-600"
-                                  : "text-green-600"
-                              }
-                            >
-                              {ponto.incertezaPercentual?.toFixed(2)}%
+                            <span className="text-blue-600 font-medium">
+                              CV: {ponto.coeficienteVariacao?.toFixed(2)}%
                             </span>
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            Desvio padrão e coeficiente de variação
                           </div>
                         </div>
                       </div>
                     </div>
                   )}
                 </div>
-              ))}
+              ))}{" "}
             </div>
-          </div>
-
-          <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-700 mb-3">
-              Observações
-            </h3>
-
-            <textarea
-              name="observacoes"
-              value={formData.observacoes}
-              onChange={handleChange}
-              rows="3"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="Adicione aqui quaisquer observações relevantes..."
-            ></textarea>
-          </div>
-
-          <div className="flex justify-end">
+          </div>          <div className="flex justify-end">
             <button
               type="submit"
-              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg"
+              className="text-white px-6 py-2 rounded-md focus:outline-none focus:ring-2"
+              style={{
+                backgroundColor: "rgb(144, 199, 45)",
+                "--tw-ring-color": "rgb(144, 199, 45)",
+              }}
+              onMouseEnter={(e) =>
+                (e.target.style.backgroundColor = "rgb(130, 180, 40)")
+              }
+              onMouseLeave={(e) =>
+                (e.target.style.backgroundColor = "rgb(144, 199, 45)")
+              }
             >
               Gerar Certificado
             </button>
           </div>
-        </form>
+          {/* Diálogo de confirmação para remoção de ponto */}{" "}
+          <ConfirmDialog
+            isOpen={confirmDialog.isOpen}
+            title={confirmDialog.title}
+            message={confirmDialog.message}
+            onCancel={(e) => {
+              e.preventDefault(); // Evita o submit do formulário
+              setConfirmDialog({ ...confirmDialog, isOpen: false });
+            }}
+            onConfirm={(e) => {
+              e.preventDefault(); // Evita o submit do formulário
+              removerPonto(confirmDialog.pontoId);
+              setConfirmDialog({ ...confirmDialog, isOpen: false });
+            }}
+          />        </form>
       )}
+      </div>
     </div>
   );
 };

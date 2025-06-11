@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { FaUser, FaLock, FaKey, FaEye, FaEyeSlash } from "react-icons/fa";
+import { Mail, Lock, Key, Eye, EyeOff } from "lucide-react";
 import "../styles/Auth.css";
 
 const LoginPage = () => {
@@ -54,28 +54,25 @@ const LoginPage = () => {
       // O erro global já é tratado pelo contexto de autenticação
     }
   };
-
   return (
     <div className="login-container">
-      <div className="login-logo">
-        <img
-          src="/images/logo-bio-research.png"
-          alt="Bio Research do Brasil Logo"
-          className="logo-image"
-        />
-      </div>
-
       <form onSubmit={handleSubmit} className="login-form">
-        <h2 className="form-title">BioOrbit</h2>
+        {" "}
+        <div className="login-logo">
+          <img
+            src="/images/logo-bio-research.png"
+            alt="BioResearch do Brasil Logo"
+            className="logo-image"
+          />
+        </div>
+        <h2 className="form-title">BioResearch - BioOrbit</h2>
         <p className="form-description">
-          Sistema de Calibração de Equipamentos Biomédicos
+          Sistema de Calibração de Micropipetas
         </p>
-
-        {error && <div className="error-message">{error}</div>}
-
+        {error && <div className="error-message">{error}</div>}{" "}
         <div className="input-group">
           <div className="input-wrapper">
-            <FaUser className="input-icon" />
+            <Mail className="input-icon" />
             <input
               type="email"
               placeholder="E-MAIL"
@@ -90,11 +87,10 @@ const LoginPage = () => {
               <div className="error-message">{formErrors.email}</div>
             )}
           </div>
-        </div>
-
+        </div>{" "}
         <div className="input-group">
           <div className="input-wrapper">
-            <FaLock className="input-icon" />
+            <Lock className="input-icon" />
             <input
               type={showPassword ? "text" : "password"}
               placeholder="SENHA"
@@ -105,21 +101,22 @@ const LoginPage = () => {
               onChange={handleChange}
               required
             />
-            <div
-              className="toggle-password"
-              onClick={() => setShowPassword(!showPassword)}
-            >
-              {showPassword ? <FaEyeSlash /> : <FaEye />}
-            </div>
+            {formData.senha && (
+              <div
+                className="toggle-password"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff /> : <Eye />}
+              </div>
+            )}
             {formErrors.senha && (
               <div className="error-message">{formErrors.senha}</div>
             )}
           </div>
-        </div>
-
+        </div>{" "}
         <div className="input-group">
           <div className="input-wrapper">
-            <FaKey className="input-icon" />
+            <Key className="input-icon" />
             <input
               type={showToken ? "text" : "password"}
               placeholder="TOKEN CORPORATIVO"
@@ -130,22 +127,22 @@ const LoginPage = () => {
               onChange={handleChange}
               required
             />
-            <div
-              className="toggle-password"
-              onClick={() => setShowToken(!showToken)}
-            >
-              {showToken ? <FaEyeSlash /> : <FaEye />}
-            </div>
+            {formData.corporateToken && (
+              <div
+                className="toggle-password"
+                onClick={() => setShowToken(!showToken)}
+              >
+                {showToken ? <EyeOff /> : <Eye />}
+              </div>
+            )}
             {formErrors.corporateToken && (
               <div className="error-message">{formErrors.corporateToken}</div>
             )}
           </div>
         </div>
-
         <button type="submit" className="login-button">
           ENTRAR
         </button>
-
         <div className="links-container">
           <Link to="/recuperar-senha" className="forgot-password">
             Esqueci minha senha
