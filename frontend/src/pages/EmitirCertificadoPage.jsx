@@ -23,6 +23,7 @@ import Tooltip from "../components/Tooltip";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { getClienteById } from "../services/clienteService";
 import { formatNumberInput, formatTemperature } from "../utils/formatUtils";
+import { PDFService } from "../services/pdfService";
 
 const EmitirCertificadoPage = () => {
   const { id } = useParams();
@@ -246,14 +247,49 @@ const EmitirCertificadoPage = () => {
         focusableArray[0].focus();
       }
     }
+  }; // Função para fazer o download do certificado em PDF
+  const handleDownloadCertificado = async () => {
+    try {
+      // Gerar o PDF usando o serviço
+      const pdf = await PDFService.gerarCertificadoCalibracao(
+        formData,
+        cliente,
+        pontosCalibra,
+        fatorZ
+      );
+
+      // Criar nome do arquivo
+      const nomeArquivo = `serie. ${formData.numeroPipeta || "SemSerie"}.pdf`;
+
+      // Baixar o PDF
+      PDFService.baixarPDF(pdf, nomeArquivo);
+    } catch (error) {
+      console.error("Erro ao gerar certificado PDF:", error);
+      alert(
+        "Erro ao gerar o certificado. Verifique se todos os dados estão preenchidos corretamente."
+      );
+    }
   };
 
-  // Função que seria chamada para fazer o download do certificado
-  const handleDownloadCertificado = () => {
-    // Implementação real faria o download do PDF gerado
-    alert(
-      "Funcionalidade de download do certificado será implementada em uma próxima etapa"
-    );
+  // Função para visualizar o PDF antes de baixar
+  const handleVisualizarCertificado = async () => {
+    try {
+      // Gerar o PDF usando o serviço
+      const pdf = await PDFService.gerarCertificadoCalibracao(
+        formData,
+        cliente,
+        pontosCalibra,
+        fatorZ
+      );
+
+      // Abrir o PDF em uma nova aba para visualização
+      PDFService.abrirPDF(pdf);
+    } catch (error) {
+      console.error("Erro ao gerar certificado PDF:", error);
+      alert(
+        "Erro ao gerar o certificado. Verifique se todos os dados estão preenchidos corretamente."
+      );
+    }
   };
 
   const renderEnderecoCompleto = () => {
@@ -864,19 +900,25 @@ const EmitirCertificadoPage = () => {
             onClick={() => navigate("/selecionar-cliente")}
           >
             <ArrowLeft className="mr-2" /> Voltar
-          </button>
+          </button>{" "}
           <h1
-            className="text-2xl font-bold text-center"
-            style={{ color: "rgb(144, 199, 45)" }}
+            className="text-2xl font-bold text-center py-2 px-4 rounded-lg"
+            style={{
+              color: "rgb(144, 199, 45)",
+            }}
           >
             Emissão de Certificado
           </h1>
           <div>{/* Espaço para equilibrar o layout */}</div>
         </div>{" "}
         <div className="bg-gray-50 p-4 rounded-md border border-gray-200 mb-6">
+          {" "}
           <h3
-            className="text-lg font-semibold mb-2"
-            style={{ color: "rgb(75, 85, 99)" }}
+            className="text-lg font-semibold mb-2 py-2 px-3 border-l-4"
+            style={{
+              color: "rgb(75, 85, 99)",
+              borderLeftColor: "rgb(144, 199, 45)",
+            }}
           >
             Dados do Cliente
           </h3>
@@ -922,26 +964,44 @@ const EmitirCertificadoPage = () => {
               <p className="mb-2">
                 Umidade Relativa: {formData.umidadeRelativa}%
               </p>
-              <p className="mb-2">Fator Z: {fatorZ.toFixed(4)}</p>
-              <p className="mb-4">
-                Emissão: {new Date().toLocaleDateString()}
-              </p>{" "}
-              <button
-                onClick={handleDownloadCertificado}
-                className="text-white px-4 py-2 rounded-md flex items-center justify-center mx-auto focus:outline-none focus:ring-2"
-                style={{
-                  backgroundColor: "rgb(144, 199, 45)",
-                  "--tw-ring-color": "rgb(144, 199, 45)",
-                }}
-                onMouseEnter={(e) =>
-                  (e.target.style.backgroundColor = "rgb(130, 180, 40)")
-                }
-                onMouseLeave={(e) =>
-                  (e.target.style.backgroundColor = "rgb(144, 199, 45)")
-                }
-              >
-                <Download className="mr-2" /> Baixar Certificado
-              </button>
+              <p className="mb-2">Fator Z: {fatorZ.toFixed(4)}</p>{" "}
+              <p className="mb-4">Emissão: {new Date().toLocaleDateString()}</p>
+              {/* Botões de ação para o certificado */}
+              <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+                <button
+                  onClick={handleVisualizarCertificado}
+                  className="text-white px-6 py-2 rounded-md flex items-center justify-center focus:outline-none focus:ring-2 transition-colors"
+                  style={{
+                    backgroundColor: "rgb(59, 130, 246)",
+                    "--tw-ring-color": "rgb(59, 130, 246)",
+                  }}
+                  onMouseEnter={(e) =>
+                    (e.target.style.backgroundColor = "rgb(37, 99, 235)")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.target.style.backgroundColor = "rgb(59, 130, 246)")
+                  }
+                >
+                  <Eye className="mr-2" /> Visualizar Certificado
+                </button>
+
+                <button
+                  onClick={handleDownloadCertificado}
+                  className="text-white px-6 py-2 rounded-md flex items-center justify-center focus:outline-none focus:ring-2 transition-colors"
+                  style={{
+                    backgroundColor: "rgb(144, 199, 45)",
+                    "--tw-ring-color": "rgb(144, 199, 45)",
+                  }}
+                  onMouseEnter={(e) =>
+                    (e.target.style.backgroundColor = "rgb(130, 180, 40)")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.target.style.backgroundColor = "rgb(144, 199, 45)")
+                  }
+                >
+                  <Download className="mr-2" /> Baixar Certificado
+                </button>
+              </div>
             </div>{" "}
             <button
               onClick={() => setCertificadoGerado(false)}
@@ -976,13 +1036,16 @@ const EmitirCertificadoPage = () => {
           >
             {" "}
             <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+              {" "}
               <h3
-                className="text-lg font-semibold mb-3"
-                style={{ color: "rgb(75, 85, 99)" }}
+                className="text-lg font-semibold mb-3 py-2 px-3 border-l-4"
+                style={{
+                  color: "rgb(75, 85, 99)",
+                  borderLeftColor: "rgb(144, 199, 45)",
+                }}
               >
                 Dados do Certificado
               </h3>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   {" "}
@@ -1031,13 +1094,16 @@ const EmitirCertificadoPage = () => {
               </div>
             </div>{" "}
             <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+              {" "}
               <h3
-                className="text-lg font-semibold mb-3"
-                style={{ color: "rgb(75, 85, 99)" }}
+                className="text-lg font-semibold mb-3 py-2 px-3 border-l-4"
+                style={{
+                  color: "rgb(75, 85, 99)",
+                  borderLeftColor: "rgb(144, 199, 45)",
+                }}
               >
                 Condições Ambientais
               </h3>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   {" "}
@@ -1082,7 +1148,7 @@ const EmitirCertificadoPage = () => {
                     >
                       +
                     </button>
-                  </div>
+                  </div>{" "}
                   <div className="text-sm text-gray-700 mt-2 p-2 bg-yellow-50 rounded-md border border-yellow-100">
                     <div className="font-medium mb-1">
                       Fator Z atual:{" "}
@@ -1090,27 +1156,6 @@ const EmitirCertificadoPage = () => {
                         {fatorZ.toFixed(4)}
                       </span>
                     </div>
-                  </div>
-                  <div className="mt-2 grid grid-cols-5 gap-1 text-center text-xs">
-                    {[15, 17.5, 20, 22.5, 25].map((temp) => (
-                      <button
-                        key={temp}
-                        type="button"
-                        className={`p-1 rounded ${
-                          formData.temperatura === temp.toFixed(1)
-                            ? "bg-green-500 text-white"
-                            : "bg-gray-100 hover:bg-gray-200"
-                        }`}
-                        onClick={() =>
-                          setFormData({
-                            ...formData,
-                            temperatura: temp.toFixed(1),
-                          })
-                        }
-                      >
-                        {temp}°C
-                      </button>
-                    ))}
                   </div>
                 </div>{" "}
                 <div>
@@ -1140,13 +1185,16 @@ const EmitirCertificadoPage = () => {
               </div>
             </div>{" "}
             <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+              {" "}
               <h3
-                className="text-lg font-semibold mb-3"
-                style={{ color: "rgb(75, 85, 99)" }}
+                className="text-lg font-semibold mb-3 py-2 px-3 border-l-4"
+                style={{
+                  color: "rgb(75, 85, 99)",
+                  borderLeftColor: "rgb(144, 199, 45)",
+                }}
               >
                 Dados da Micropipeta
               </h3>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {" "}
                 <div>
@@ -1357,9 +1405,13 @@ const EmitirCertificadoPage = () => {
             <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
               {" "}
               <div className="flex justify-between items-center mb-3">
+                {" "}
                 <h3
-                  className="text-lg font-semibold flex items-center"
-                  style={{ color: "rgb(75, 85, 99)" }}
+                  className="text-lg font-semibold flex items-center py-2 px-3 border-l-4"
+                  style={{
+                    color: "rgb(75, 85, 99)",
+                    borderLeftColor: "rgb(144, 199, 45)",
+                  }}
                 >
                   <TrendingUp
                     className="mr-2"
@@ -1367,7 +1419,6 @@ const EmitirCertificadoPage = () => {
                   />
                   Pontos de Calibração
                 </h3>
-
                 <div className="flex space-x-2">
                   {" "}
                   <button
@@ -1605,8 +1656,11 @@ const EmitirCertificadoPage = () => {
                       <div className="bg-gray-50 p-3 rounded-md">
                         {" "}
                         <h4
-                          className="font-medium mb-2 flex items-center"
-                          style={{ color: "rgb(75, 85, 99)" }}
+                          className="font-medium mb-2 flex items-center py-1.5 px-2 border-l-4"
+                          style={{
+                            color: "rgb(75, 85, 99)",
+                            borderLeftColor: "rgb(144, 199, 45)",
+                          }}
                         >
                           <Calculator
                             className="mr-2"

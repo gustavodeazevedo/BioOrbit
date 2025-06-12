@@ -1,5 +1,6 @@
 /* Reset básico para remover margens padrão do navegador */
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   width: 100%;
@@ -94,7 +95,6 @@ html, body {
   font-weight: 600;
   margin-bottom: 1rem;
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid rgb(209, 213, 219);
 }
 
 .user-info-row {
@@ -310,7 +310,6 @@ html, body {
   align-items: center;
   margin-bottom: 1.2rem;
   padding-bottom: 0.8rem;
-  border-bottom: 1px solid rgb(209, 213, 219);
 }
 
 .user-avatar {
