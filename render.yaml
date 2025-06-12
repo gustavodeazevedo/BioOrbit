@@ -4,12 +4,11 @@ services:
     env: node
     region: oregon
     plan: free
-    startCommand: npm start
-    envVars:
+    startCommand: npm start    envVars:
       - key: NODE_ENV
         value: production
       - key: MONGODB_URI
-        sync: false
+        value: mongodb+srv://gustavodeazevedo2003:EliseteDaniKa4@biocalib.ybbb3or.mongodb.net/?retryWrites=true&w=majority&appName=biocalib
       - key: JWT_SECRET
         generateValue: true
       - key: CORPORATE_TOKEN

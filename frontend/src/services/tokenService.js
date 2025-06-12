@@ -1,7 +1,7 @@
 import axios from 'axios';
 import authService from './authService';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/admin/token';
+const API_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/admin/token` : 'http://localhost:5000/api/admin/token';
 
 // Configurar o axios para incluir o token JWT em todas as requisições
 const axiosWithAuth = () => {
