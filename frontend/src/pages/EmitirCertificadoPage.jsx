@@ -28,7 +28,7 @@ const EmitirCertificadoPage = () => {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   // Ref para controlar a navegação entre inputs
   const formRef = useRef(null);
 
@@ -41,6 +41,7 @@ const EmitirCertificadoPage = () => {
     marcaPipeta: "",
     modeloPipeta: "",
     numeroPipeta: "",
+    numeroIdentificacao: "",
     capacidade: "",
     unidadeCapacidade: "µL",
     faixaIndicacao: "", // Faixa de indicação da pipeta
@@ -60,14 +61,14 @@ const EmitirCertificadoPage = () => {
   });
   const [certificadoGerado, setCertificadoGerado] = useState(false);
   // Fator Z calculado com base na temperatura
-  const [fatorZ, setFatorZ] = useState(1.0029); // Valor padrão para 20°C
-  // Estado para os pontos de calibração
+  const [fatorZ, setFatorZ] = useState(1.0029); // Valor padrão para 20°C  // Estado para os pontos de calibração
   const [pontosCalibra, setPontosCalibra] = useState([
     {
       id: 1,
       volumeNominal: "",
       unidade: "µL",
       medicoes: Array(10).fill(""),
+      valoresTexto: "", // Campo para armazenar o texto original
       media: null,
       mediaMassa: null,
       inexatidao: null,
@@ -224,19 +225,19 @@ const EmitirCertificadoPage = () => {
 
   // Função para navegar para o próximo input quando Enter for pressionado
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       e.preventDefault();
-      
+
       if (!formRef.current) return;
-      
+
       // Seleciona todos os inputs, selects e buttons focáveis no formulário
       const focusableElements = formRef.current.querySelectorAll(
         'input:not([disabled]):not([type="hidden"]), select:not([disabled]), button:not([disabled]):not([type="submit"])'
       );
-      
+
       const focusableArray = Array.from(focusableElements);
       const currentIndex = focusableArray.indexOf(e.target);
-      
+
       if (currentIndex > -1 && currentIndex < focusableArray.length - 1) {
         // Move para o próximo elemento
         focusableArray[currentIndex + 1].focus();
@@ -264,14 +265,14 @@ const EmitirCertificadoPage = () => {
     return `${rua}, ${numero}${
       complemento ? `, ${complemento}` : ""
     } - ${bairro} - ${cidade}/${estado} - CEP: ${cep}`;
-  };
-  // Função para adicionar um novo ponto de calibração
+  }; // Função para adicionar um novo ponto de calibração
   const adicionarPontoCalibracao = () => {
     const novoPonto = {
       id: Date.now(),
       volumeNominal: "",
       unidade: "µL",
       medicoes: Array(10).fill(""),
+      valoresTexto: "",
       media: null,
       mediaMassa: null,
       inexatidao: null,
@@ -597,8 +598,7 @@ const EmitirCertificadoPage = () => {
     return Math.sqrt(
       somaDosQuadradosDasDiferencas / (valoresNumericos.length - 1)
     );
-  };
-  // Função para adicionar novo ponto de calibração
+  }; // Função para adicionar novo ponto de calibração
   const adicionarPonto = () => {
     setPontosCalibra([
       ...pontosCalibra,
@@ -607,6 +607,7 @@ const EmitirCertificadoPage = () => {
         volumeNominal: "",
         unidade: "µL",
         medicoes: Array(10).fill(""),
+        valoresTexto: "",
         media: null,
         mediaMassa: null,
         inexatidao: null,
@@ -641,92 +642,29 @@ const EmitirCertificadoPage = () => {
     setPontosCalibra(pontosCalibra.filter((ponto) => ponto.id !== id));
     // Fecha o modal de confirmação
     setConfirmDialog({ ...confirmDialog, isOpen: false });
-  }; // Função para atualizar as medições de um ponto específico
-  const handleMedicaoChange = (pontoId, indice, valor) => {
+  }; // Função para processar valores separados por vírgula em um único input
+  const handleValoresChange = (pontoId, valores) => {
+    // Processa a string de valores separados por vírgula
+    const valoresArray = valores
+      .split(",")
+      .map((v) => v.trim())
+      .filter((v) => v !== "");
+
+    // Preenche um array de 10 posições com os valores ou strings vazias
+    const medicoesPadrao = Array(10).fill("");
+    valoresArray.forEach((valor, index) => {
+      if (index < 10) {
+        medicoesPadrao[index] = valor;
+      }
+    });
+
     setPontosCalibra(
       pontosCalibra.map((ponto) => {
         if (ponto.id === pontoId) {
-          const novasMedicoes = [...ponto.medicoes];
-
-          // Usa a função de formatação de números da pasta utils
-          const valorFormatado = formatNumberInput(valor);
-
-          novasMedicoes[indice] = valorFormatado;
-
-          // Filtrar medições válidas
-          const medicoesValidas = novasMedicoes
-            .map((m) => parseFloat(m))
-            .filter((m) => !isNaN(m));
-
-          // Calcular média de massa
-          const mediaMassa =
-            medicoesValidas.length > 0
-              ? medicoesValidas.reduce((sum, val) => sum + val, 0) /
-                medicoesValidas.length
-              : null;
-
-          // Converter cada medição para volume e calcular média
-          let media = null;
-          let volumesIndividuais = [];
-
-          if (mediaMassa !== null) {
-            // Converter cada medição individual de massa para volume
-            volumesIndividuais = medicoesValidas.map((massa) => massa * fatorZ);
-
-            // Calcular a média dos volumes
-            media =
-              volumesIndividuais.reduce((sum, vol) => sum + vol, 0) /
-              volumesIndividuais.length;
-          }
-
-          // Calcular exatidão/accuracy (se o volume nominal estiver definido)
-          let inexatidao = null;
-          let inexatidaoPercentual = null;
-
-          if (media !== null && ponto.volumeNominal !== "") {
-            const volumeNominal = parseFloat(ponto.volumeNominal);
-            inexatidao = media - volumeNominal;
-            inexatidaoPercentual = (inexatidao / volumeNominal) * 100;
-          }
-
-          // Calcular a precisão (desvio padrão) diretamente dos volumes individuais
-          let desvioPadrao = null;
-          let coeficienteVariacao = null;
-
-          if (volumesIndividuais.length > 1 && media !== null) {
-            const somaDosQuadradosDasDiferencas = volumesIndividuais.reduce(
-              (sum, vol) => sum + Math.pow(vol - media, 2),
-              0
-            );
-
-            desvioPadrao = Math.sqrt(
-              somaDosQuadradosDasDiferencas / (volumesIndividuais.length - 1)
-            );
-
-            // Cálculo do CV (Coeficiente de Variação)
-            coeficienteVariacao =
-              media !== 0 ? (desvioPadrao / media) * 100 : 0;
-          }
           return {
             ...ponto,
-            medicoes: novasMedicoes,
-            media: media !== null ? parseFloat(media.toFixed(2)) : null,
-            mediaMassa:
-              mediaMassa !== null ? parseFloat(mediaMassa.toFixed(2)) : null,
-            inexatidao:
-              inexatidao !== null ? parseFloat(inexatidao.toFixed(2)) : null,
-            inexatidaoPercentual:
-              inexatidaoPercentual !== null
-                ? parseFloat(inexatidaoPercentual.toFixed(2))
-                : null,
-            desvioPadrao:
-              desvioPadrao !== null
-                ? parseFloat(desvioPadrao.toFixed(2))
-                : null,
-            coeficienteVariacao:
-              coeficienteVariacao !== null
-                ? parseFloat(coeficienteVariacao.toFixed(2))
-                : null,
+            medicoes: medicoesPadrao,
+            valoresTexto: valores, // Mantém o texto original para exibição
           };
         }
         return ponto;
@@ -820,7 +758,8 @@ const EmitirCertificadoPage = () => {
         return ponto;
       })
     );
-  };  if (loading) {
+  };
+  if (loading) {
     return (
       <div
         className="min-h-screen w-full p-6"
@@ -856,7 +795,8 @@ const EmitirCertificadoPage = () => {
         </div>
       </div>
     );
-  }  if (error) {
+  }
+  if (error) {
     return (
       <div
         className="min-h-screen w-full p-6"
@@ -893,7 +833,8 @@ const EmitirCertificadoPage = () => {
         </div>
       </div>
     );
-  }  return (
+  }
+  return (
     <div
       className="min-h-screen w-full p-6"
       style={{
@@ -931,8 +872,9 @@ const EmitirCertificadoPage = () => {
             Emissão de Certificado
           </h1>
           <div>{/* Espaço para equilibrar o layout */}</div>
-        </div>        <div className="bg-gray-50 p-4 rounded-md border border-gray-200 mb-6">
-          <h3 
+        </div>{" "}
+        <div className="bg-gray-50 p-4 rounded-md border border-gray-200 mb-6">
+          <h3
             className="text-lg font-semibold mb-2"
             style={{ color: "rgb(75, 85, 99)" }}
           >
@@ -949,38 +891,68 @@ const EmitirCertificadoPage = () => {
             </div>
           </div>
         </div>
-
-      {certificadoGerado ? (
-        <div className="text-center">
-          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-md mb-6">
-            Certificado gerado com sucesso!
-          </div>
-
-          <div className="mb-6 p-8 border-2 border-dashed border-gray-300 rounded-lg">
-            <FileText className="text-6xl text-red-600 mx-auto mb-4" />
-            <p className="text-xl font-semibold mb-2">
-              Certificado de Calibração
-            </p>
-            <p className="mb-2">Número: {formData.numeroCertificado}</p>
-            <p className="mb-2">Cliente: {cliente?.nome}</p>{" "}
-            <p className="mb-2">
-              Micropipeta: {formData.marcaPipeta} {formData.modeloPipeta}
-            </p>
-            <p className="mb-2">Número de Série: {formData.numeroPipeta}</p>
-            <p className="mb-2">
-              Tipo de Instrumento:{" "}
-              {formData.tipoInstrumento === "monocanal"
-                ? "Monocanal"
-                : "Multicanal"}
-            </p>
-            <p className="mb-2">Temperatura: {formData.temperatura} °C</p>
-            <p className="mb-2">
-              Umidade Relativa: {formData.umidadeRelativa}%
-            </p>
-            <p className="mb-2">Fator Z: {fatorZ.toFixed(4)}</p>
-            <p className="mb-4">Emissão: {new Date().toLocaleDateString()}</p>            <button
-              onClick={handleDownloadCertificado}
-              className="text-white px-4 py-2 rounded-md flex items-center justify-center mx-auto focus:outline-none focus:ring-2"
+        {certificadoGerado ? (
+          <div className="text-center">
+            <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-md mb-6">
+              Certificado gerado com sucesso!
+            </div>
+            <div className="mb-6 p-8 border-2 border-dashed border-gray-300 rounded-lg">
+              <FileText className="text-6xl text-red-600 mx-auto mb-4" />
+              <p className="text-xl font-semibold mb-2">
+                Certificado de Calibração
+              </p>
+              <p className="mb-2">Número: {formData.numeroCertificado}</p>
+              <p className="mb-2">Cliente: {cliente?.nome}</p>{" "}
+              <p className="mb-2">
+                Micropipeta: {formData.marcaPipeta} {formData.modeloPipeta}
+              </p>{" "}
+              <p className="mb-2">Número de Série: {formData.numeroPipeta}</p>
+              {formData.numeroIdentificacao && (
+                <p className="mb-2">
+                  Nº de Identificação: {formData.numeroIdentificacao}
+                </p>
+              )}
+              <p className="mb-2">
+                Tipo de Instrumento:{" "}
+                {formData.tipoInstrumento === "monocanal"
+                  ? "Monocanal"
+                  : "Multicanal"}
+              </p>
+              <p className="mb-2">Temperatura: {formData.temperatura} °C</p>
+              <p className="mb-2">
+                Umidade Relativa: {formData.umidadeRelativa}%
+              </p>
+              <p className="mb-2">Fator Z: {fatorZ.toFixed(4)}</p>
+              <p className="mb-4">
+                Emissão: {new Date().toLocaleDateString()}
+              </p>{" "}
+              <button
+                onClick={handleDownloadCertificado}
+                className="text-white px-4 py-2 rounded-md flex items-center justify-center mx-auto focus:outline-none focus:ring-2"
+                style={{
+                  backgroundColor: "rgb(144, 199, 45)",
+                  "--tw-ring-color": "rgb(144, 199, 45)",
+                }}
+                onMouseEnter={(e) =>
+                  (e.target.style.backgroundColor = "rgb(130, 180, 40)")
+                }
+                onMouseLeave={(e) =>
+                  (e.target.style.backgroundColor = "rgb(144, 199, 45)")
+                }
+              >
+                <Download className="mr-2" /> Baixar Certificado
+              </button>
+            </div>{" "}
+            <button
+              onClick={() => setCertificadoGerado(false)}
+              className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 mr-2"
+              style={{ color: "rgb(75, 85, 99)" }}
+            >
+              Editar Dados
+            </button>
+            <button
+              onClick={() => navigate("/selecionar-cliente")}
+              className="text-white px-4 py-2 rounded-md ml-2 focus:outline-none focus:ring-2"
               style={{
                 backgroundColor: "rgb(144, 199, 45)",
                 "--tw-ring-color": "rgb(144, 199, 45)",
@@ -992,699 +964,757 @@ const EmitirCertificadoPage = () => {
                 (e.target.style.backgroundColor = "rgb(144, 199, 45)")
               }
             >
-              <Download className="mr-2" /> Baixar Certificado
+              Novo Certificado
             </button>
-          </div>          <button
-            onClick={() => setCertificadoGerado(false)}
-            className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 mr-2"
-            style={{ color: "rgb(75, 85, 99)" }}
-          >
-            Editar Dados
-          </button>
-
-          <button
-            onClick={() => navigate("/selecionar-cliente")}
-            className="text-white px-4 py-2 rounded-md ml-2 focus:outline-none focus:ring-2"
-            style={{
-              backgroundColor: "rgb(144, 199, 45)",
-              "--tw-ring-color": "rgb(144, 199, 45)",
-            }}
-            onMouseEnter={(e) =>
-              (e.target.style.backgroundColor = "rgb(130, 180, 40)")
-            }
-            onMouseLeave={(e) =>
-              (e.target.style.backgroundColor = "rgb(144, 199, 45)")
-            }
-          >
-            Novo Certificado
-          </button>
-        </div>
-      ) : (
-        <form 
-          onSubmit={handleSubmit} 
-          onKeyDown={handleKeyDown}
-          className="space-y-6" 
-          ref={formRef}
-        >          <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-            <h3 
-              className="text-lg font-semibold mb-3"
-              style={{ color: "rgb(75, 85, 99)" }}
-            >
-              Dados do Certificado
-            </h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                {" "}                <label 
-                  className="block text-sm font-medium mb-1"
-                  style={{ color: "rgb(75, 85, 99)" }}
-                >
-                  Número do Certificado
-                </label>
-                <input
-                  type="text"
-                  name="numeroCertificado"
-                  value={formData.numeroCertificado}
-                  onChange={handleChange}
-                  placeholder="Ex: 8550.1"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
-                  style={{
-                    "--tw-ring-color": "rgb(144, 199, 45)",
-                    color: "rgb(75, 85, 99)",
-                  }}
-                  required
-                />
-              </div>{" "}
-              <div>
-                {" "}                <label 
-                  className="block text-sm font-medium mb-1"
-                  style={{ color: "rgb(75, 85, 99)" }}
-                >
-                  Data da Calibração
-                </label>
-                <input
-                  type="date"
-                  name="dataCalibracao"
-                  value={formData.dataCalibracao}
-                  onChange={handleChange}
-                  placeholder="Selecione a data da calibração"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
-                  style={{
-                    "--tw-ring-color": "rgb(144, 199, 45)",
-                    color: "rgb(75, 85, 99)",
-                  }}
-                  required
-                />
-              </div>
-            </div>
-          </div>          <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-            <h3 
-              className="text-lg font-semibold mb-3"
-              style={{ color: "rgb(75, 85, 99)" }}
-            >
-              Condições Ambientais
-            </h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>                <label 
-                  className="flex text-sm font-medium mb-1 items-center"
-                  style={{ color: "rgb(75, 85, 99)" }}
-                >
-                  <Thermometer className="mr-2 text-red-500" />
-                  Temperatura (°C)
-                </label>
-                <div className="relative flex items-center">
-                  <button
-                    type="button"
-                    onClick={() => alterarTemperatura(-0.5)}
-                    className="px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded-l-md border border-gray-300"
-                  >
-                    -
-                  </button>
-                  <input
-                    type="number"
-                    name="temperatura"
-                    value={formData.temperatura}
-                    onChange={handleChange}
-                    onBlur={(e) => {
-                      const ajustado = ajustarTemperatura(e.target.value);
-                      setFormData({ ...formData, temperatura: ajustado });
-                    }}
-                    className="w-full px-3 py-2 border-y border-gray-300 focus:outline-none focus:ring-2 text-center"
-                    style={{
-                      "--tw-ring-color": "rgb(144, 199, 45)",
-                      color: "rgb(75, 85, 99)",
-                    }}
-                    step="0.5"
-                    min="15.0"
-                    max="30.0"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => alterarTemperatura(0.5)}
-                    className="px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded-r-md border border-gray-300"
-                  >
-                    +
-                  </button>
-                </div>
-                <div className="text-sm text-gray-700 mt-2 p-2 bg-yellow-50 rounded-md border border-yellow-100">
-                  <div className="font-medium mb-1">
-                    Fator Z atual:{" "}
-                    <span className="text-green-600">{fatorZ.toFixed(4)}</span>
-                  </div>
-                </div>
-                <div className="mt-2 grid grid-cols-5 gap-1 text-center text-xs">
-                  {[15, 17.5, 20, 22.5, 25].map((temp) => (
-                    <button
-                      key={temp}
-                      type="button"
-                      className={`p-1 rounded ${
-                        formData.temperatura === temp.toFixed(1)
-                          ? "bg-green-500 text-white"
-                          : "bg-gray-100 hover:bg-gray-200"
-                      }`}
-                      onClick={() =>
-                        setFormData({
-                          ...formData,
-                          temperatura: temp.toFixed(1),
-                        })
-                      }
-                    >
-                      {temp}°C
-                    </button>
-                  ))}
-                </div>
-              </div>{" "}
-              <div>                <label 
-                  className="flex text-sm font-medium mb-1 items-center"
-                  style={{ color: "rgb(75, 85, 99)" }}
-                >
-                  <Droplet className="mr-2 text-blue-500" />
-                  Umidade Relativa do Ar (%)
-                </label>
-                <input
-                  type="number"
-                  name="umidadeRelativa"
-                  value={formData.umidadeRelativa}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
-                  style={{
-                    "--tw-ring-color": "rgb(144, 199, 45)",
-                    color: "rgb(75, 85, 99)",
-                  }}
-                  min="30"
-                  max="90"
-                  required
-                />
-              </div>
-            </div>
-          </div>          <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-            <h3 
-              className="text-lg font-semibold mb-3"
-              style={{ color: "rgb(75, 85, 99)" }}
-            >
-              Dados da Micropipeta
-            </h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">              <div>
-                <label 
-                  className="block text-sm font-medium mb-1"
-                  style={{ color: "rgb(75, 85, 99)" }}
-                >
-                  Marca da Pipeta
-                </label>
-                <input
-                  type="text"
-                  name="marcaPipeta"
-                  value={formData.marcaPipeta}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
-                  style={{
-                    "--tw-ring-color": "rgb(144, 199, 45)",
-                    color: "rgb(75, 85, 99)",
-                  }}
-                  required
-                  placeholder="Ex: Eppendorf, Gilson, HTL, etc."
-                />
-              </div>
-              <div>
-                <label 
-                  className="block text-sm font-medium mb-1"
-                  style={{ color: "rgb(75, 85, 99)" }}
-                >
-                  Modelo da Pipeta
-                </label>
-                <input
-                  type="text"
-                  name="modeloPipeta"
-                  value={formData.modeloPipeta}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
-                  style={{
-                    "--tw-ring-color": "rgb(144, 199, 45)",
-                    color: "rgb(75, 85, 99)",
-                  }}
-                  required
-                  placeholder="Ex: P1000, Research Plus, etc."
-                />
-              </div>              <div>
-                <label 
-                  className="block text-sm font-medium mb-1"
-                  style={{ color: "rgb(75, 85, 99)" }}
-                >
-                  Número/Série da Pipeta
-                </label>
-                <input
-                  type="text"
-                  name="numeroPipeta"
-                  value={formData.numeroPipeta}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
-                  style={{
-                    "--tw-ring-color": "rgb(144, 199, 45)",
-                    color: "rgb(75, 85, 99)",
-                  }}
-                  required
-                  placeholder="Ex: AJ12345"
-                />
-              </div>{" "}              <div>
-                <label 
-                  className="block text-sm font-medium mb-1"
-                  style={{ color: "rgb(75, 85, 99)" }}
-                >
-                  Capacidade
-                </label>
-                <div className="flex">
-                  <input
-                    type="text"
-                    name="capacidade"
-                    value={formData.capacidade}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2"
-                    style={{
-                      "--tw-ring-color": "rgb(144, 199, 45)",
-                      color: "rgb(75, 85, 99)",
-                    }}
-                    required
-                    placeholder="Ex: 1000"
-                  />
-                  <select
-                    name="unidadeCapacidade"
-                    value={formData.unidadeCapacidade}
-                    onChange={handleChange}
-                    className="px-3 py-2 border border-l-0 border-gray-300 rounded-r-md focus:outline-none focus:ring-2"
-                    style={{
-                      "--tw-ring-color": "rgb(144, 199, 45)",
-                      color: "rgb(75, 85, 99)",
-                    }}
-                  >
-                    <option value="µL">µL</option>
-                    <option value="mL">mL</option>
-                  </select>
-                </div>
-              </div>              <div>
-                <label 
-                  className="block text-sm font-medium mb-1"
-                  style={{ color: "rgb(75, 85, 99)" }}
-                >
-                  Tipo de Instrumento
-                </label>
-                <div className="flex space-x-4">
-                  <label className="inline-flex items-center">
-                    <input
-                      type="radio"
-                      name="tipoInstrumento"
-                      value="monocanal"
-                      checked={formData.tipoInstrumento === "monocanal"}
-                      onChange={handleChange}
-                      className="form-radio h-5 w-5"
-                      style={{ color: "rgb(144, 199, 45)" }}
-                    />
-                    <span 
-                      className="ml-2"
-                      style={{ color: "rgb(75, 85, 99)" }}
-                    >
-                      Monocanal
-                    </span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input
-                      type="radio"
-                      name="tipoInstrumento"
-                      value="multicanal"
-                      checked={formData.tipoInstrumento === "multicanal"}
-                      onChange={handleChange}
-                      className="form-radio h-5 w-5"
-                      style={{ color: "rgb(144, 199, 45)" }}
-                    />
-                    <span 
-                      className="ml-2"
-                      style={{ color: "rgb(75, 85, 99)" }}
-                    >
-                      Multicanal
-                    </span>
-                  </label>
-                </div>
-              </div>              <div>
-                <label 
-                  className="block text-sm font-medium mb-1"
-                  style={{ color: "rgb(75, 85, 99)" }}
-                >
-                  Faixa de Indicação
-                </label>
-                <input
-                  type="text"
-                  name="faixaIndicacao"
-                  value={formData.faixaIndicacao}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
-                  style={{
-                    "--tw-ring-color": "rgb(144, 199, 45)",
-                    color: "rgb(75, 85, 99)",
-                  }}
-                  placeholder="Ex: 100-1000 µL"
-                />
-              </div>
-              <div>
-                <label 
-                  className="block text-sm font-medium mb-1"
-                  style={{ color: "rgb(75, 85, 99)" }}
-                >
-                  Faixa Calibrada
-                </label>
-                <input
-                  type="text"
-                  name="faixaCalibrada"
-                  value={formData.faixaCalibrada}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
-                  style={{
-                    "--tw-ring-color": "rgb(144, 199, 45)",
-                    color: "rgb(75, 85, 99)",
-                  }}
-                  placeholder="Ex: 200-1000 µL"
-                />
-              </div>
-            </div>
           </div>
-          <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-            {" "}            <div className="flex justify-between items-center mb-3">
-              <h3 
-                className="text-lg font-semibold flex items-center"
+        ) : (
+          <form
+            onSubmit={handleSubmit}
+            onKeyDown={handleKeyDown}
+            className="space-y-6"
+            ref={formRef}
+          >
+            {" "}
+            <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+              <h3
+                className="text-lg font-semibold mb-3"
                 style={{ color: "rgb(75, 85, 99)" }}
               >
-                <TrendingUp 
-                  className="mr-2"
-                  style={{ color: "rgb(144, 199, 45)" }}
-                />
-                Pontos de Calibração
+                Dados do Certificado
               </h3>
 
-              <div className="flex space-x-2">
-                {" "}
-                <button
-                  type="button"
-                  onClick={() => setMostrarNotaCalculos(!mostrarNotaCalculos)}
-                  className={`flex items-center text-sm px-3 py-1.5 rounded-md border transition-colors duration-200 ${
-                    mostrarNotaCalculos
-                      ? "bg-blue-100 text-blue-800 border-blue-300"
-                      : "bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
-                  }`}
-                >
-                  {mostrarNotaCalculos ? (
-                    <>
-                      <EyeOff className="mr-1" /> Ocultar Ajuda
-                    </>
-                  ) : (
-                    <>
-                      <Info className="mr-1" /> Como os cálculos são feitos?
-                    </>
-                  )}
-                </button>{" "}                <button
-                  type="button"
-                  className="flex items-center text-sm px-3 py-1.5 rounded-md border border-green-300 transition-colors"
-                  style={{
-                    backgroundColor: "rgb(240, 253, 244)",
-                    color: "rgb(144, 199, 45)",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.backgroundColor = "rgb(220, 252, 231)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.backgroundColor = "rgb(240, 253, 244)";
-                  }}
-                  onClick={adicionarPonto}
-                  title="Adicionar novo ponto de calibração"
-                >
-                  <Plus className="mr-2" /> Adicionar Ponto
-                </button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  {" "}
+                  <label
+                    className="block text-sm font-medium mb-1"
+                    style={{ color: "rgb(75, 85, 99)" }}
+                  >
+                    Número do Certificado
+                  </label>
+                  <input
+                    type="text"
+                    name="numeroCertificado"
+                    value={formData.numeroCertificado}
+                    onChange={handleChange}
+                    placeholder="Ex: 8550.1"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                    style={{
+                      "--tw-ring-color": "rgb(144, 199, 45)",
+                      color: "rgb(75, 85, 99)",
+                    }}
+                    required
+                  />
+                </div>{" "}
+                <div>
+                  {" "}
+                  <label
+                    className="block text-sm font-medium mb-1"
+                    style={{ color: "rgb(75, 85, 99)" }}
+                  >
+                    Data da Calibração
+                  </label>
+                  <input
+                    type="date"
+                    name="dataCalibracao"
+                    value={formData.dataCalibracao}
+                    onChange={handleChange}
+                    placeholder="Selecione a data da calibração"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                    style={{
+                      "--tw-ring-color": "rgb(144, 199, 45)",
+                      color: "rgb(75, 85, 99)",
+                    }}
+                    required
+                  />
+                </div>
               </div>
             </div>{" "}
-            {mostrarNotaCalculos && (
-              <div className="bg-blue-50 p-3 rounded-md mb-4 text-sm text-blue-700 border border-blue-200 animate-fade-in shadow-sm">
-                <div className="flex items-start">
+            <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+              <h3
+                className="text-lg font-semibold mb-3"
+                style={{ color: "rgb(75, 85, 99)" }}
+              >
+                Condições Ambientais
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
                   {" "}
-                  <Calculator className="mr-2 mt-0.5 text-blue-500 flex-shrink-0" />
-                  <div className="flex-1">
-                    <div className="flex justify-between items-center mb-2">
-                      <p className="font-bold text-blue-800">
-                        Nota sobre os cálculos:
-                      </p>
+                  <label
+                    className="flex text-sm font-medium mb-1 items-center"
+                    style={{ color: "rgb(75, 85, 99)" }}
+                  >
+                    <Thermometer className="mr-2 text-red-500" />
+                    Temperatura (°C)
+                  </label>
+                  <div className="relative flex items-center">
+                    <button
+                      type="button"
+                      onClick={() => alterarTemperatura(-0.5)}
+                      className="px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded-l-md border border-gray-300"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      name="temperatura"
+                      value={formData.temperatura}
+                      onChange={handleChange}
+                      onBlur={(e) => {
+                        const ajustado = ajustarTemperatura(e.target.value);
+                        setFormData({ ...formData, temperatura: ajustado });
+                      }}
+                      className="w-full px-3 py-2 border-y border-gray-300 focus:outline-none focus:ring-2 text-center"
+                      style={{
+                        "--tw-ring-color": "rgb(144, 199, 45)",
+                        color: "rgb(75, 85, 99)",
+                      }}
+                      step="0.5"
+                      min="15.0"
+                      max="30.0"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => alterarTemperatura(0.5)}
+                      className="px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded-r-md border border-gray-300"
+                    >
+                      +
+                    </button>
+                  </div>
+                  <div className="text-sm text-gray-700 mt-2 p-2 bg-yellow-50 rounded-md border border-yellow-100">
+                    <div className="font-medium mb-1">
+                      Fator Z atual:{" "}
+                      <span className="text-green-600">
+                        {fatorZ.toFixed(4)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-2 grid grid-cols-5 gap-1 text-center text-xs">
+                    {[15, 17.5, 20, 22.5, 25].map((temp) => (
                       <button
-                        onClick={() => setMostrarNotaCalculos(false)}
-                        className="text-blue-500 hover:text-blue-700 p-1"
-                        title="Fechar"
+                        key={temp}
+                        type="button"
+                        className={`p-1 rounded ${
+                          formData.temperatura === temp.toFixed(1)
+                            ? "bg-green-500 text-white"
+                            : "bg-gray-100 hover:bg-gray-200"
+                        }`}
+                        onClick={() =>
+                          setFormData({
+                            ...formData,
+                            temperatura: temp.toFixed(1),
+                          })
+                        }
                       >
-                        <EyeOff size={14} />
+                        {temp}°C
                       </button>
-                    </div>{" "}
-                    <p>
-                      Os valores devem ser inseridos em{" "}
-                      <strong>massa (mg)</strong> e serão convertidos para{" "}
-                      <strong>volume (µL)</strong> usando o fator Z, que varia
-                      de acordo com a temperatura do ambiente.
-                    </p>
-                    <p>Fórmula: Volume (µL) = Massa (mg) × Fator Z</p>{" "}
-                    <div className="mt-2 border-t border-blue-200 pt-2">
-                      <p className="font-bold text-blue-800 mb-1">
-                        Cálculos realizados:
+                    ))}
+                  </div>
+                </div>{" "}
+                <div>
+                  {" "}
+                  <label
+                    className="flex text-sm font-medium mb-1 items-center"
+                    style={{ color: "rgb(75, 85, 99)" }}
+                  >
+                    <Droplet className="mr-2 text-blue-500" />
+                    Umidade Relativa do Ar (%)
+                  </label>
+                  <input
+                    type="number"
+                    name="umidadeRelativa"
+                    value={formData.umidadeRelativa}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                    style={{
+                      "--tw-ring-color": "rgb(144, 199, 45)",
+                      color: "rgb(75, 85, 99)",
+                    }}
+                    min="30"
+                    max="90"
+                    required
+                  />
+                </div>
+              </div>
+            </div>{" "}
+            <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+              <h3
+                className="text-lg font-semibold mb-3"
+                style={{ color: "rgb(75, 85, 99)" }}
+              >
+                Dados da Micropipeta
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {" "}
+                <div>
+                  <label
+                    className="block text-sm font-medium mb-1"
+                    style={{ color: "rgb(75, 85, 99)" }}
+                  >
+                    Marca da Pipeta
+                  </label>
+                  <input
+                    type="text"
+                    name="marcaPipeta"
+                    value={formData.marcaPipeta}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                    style={{
+                      "--tw-ring-color": "rgb(144, 199, 45)",
+                      color: "rgb(75, 85, 99)",
+                    }}
+                    required
+                    placeholder="Ex: Eppendorf, Gilson, HTL, etc."
+                  />
+                </div>
+                <div>
+                  <label
+                    className="block text-sm font-medium mb-1"
+                    style={{ color: "rgb(75, 85, 99)" }}
+                  >
+                    Modelo da Pipeta
+                  </label>
+                  <input
+                    type="text"
+                    name="modeloPipeta"
+                    value={formData.modeloPipeta}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                    style={{
+                      "--tw-ring-color": "rgb(144, 199, 45)",
+                      color: "rgb(75, 85, 99)",
+                    }}
+                    required
+                    placeholder="Ex: P1000, Research Plus, etc."
+                  />
+                </div>{" "}
+                <div>
+                  <label
+                    className="block text-sm font-medium mb-1"
+                    style={{ color: "rgb(75, 85, 99)" }}
+                  >
+                    Número/Série da Pipeta
+                  </label>
+                  <input
+                    type="text"
+                    name="numeroPipeta"
+                    value={formData.numeroPipeta}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                    style={{
+                      "--tw-ring-color": "rgb(144, 199, 45)",
+                      color: "rgb(75, 85, 99)",
+                    }}
+                    required
+                    placeholder="Ex: AJ12345"
+                  />{" "}
+                </div>
+                <div>
+                  <label
+                    className="block text-sm font-medium mb-1"
+                    style={{ color: "rgb(75, 85, 99)" }}
+                  >
+                    Nº de Identificação
+                  </label>
+                  <input
+                    type="text"
+                    name="numeroIdentificacao"
+                    value={formData.numeroIdentificacao}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                    style={{
+                      "--tw-ring-color": "rgb(144, 199, 45)",
+                      color: "rgb(75, 85, 99)",
+                    }}
+                    placeholder="Ex: ID001, BIO123, etc. (opcional)"
+                  />
+                </div>
+                <div>
+                  <label
+                    className="block text-sm font-medium mb-1"
+                    style={{ color: "rgb(75, 85, 99)" }}
+                  >
+                    Capacidade
+                  </label>
+                  <div className="flex">
+                    <input
+                      type="text"
+                      name="capacidade"
+                      value={formData.capacidade}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2"
+                      style={{
+                        "--tw-ring-color": "rgb(144, 199, 45)",
+                        color: "rgb(75, 85, 99)",
+                      }}
+                      required
+                      placeholder="Ex: 1000"
+                    />
+                    <select
+                      name="unidadeCapacidade"
+                      value={formData.unidadeCapacidade}
+                      onChange={handleChange}
+                      className="px-3 py-2 border border-l-0 border-gray-300 rounded-r-md focus:outline-none focus:ring-2"
+                      style={{
+                        "--tw-ring-color": "rgb(144, 199, 45)",
+                        color: "rgb(75, 85, 99)",
+                      }}
+                    >
+                      <option value="µL">µL</option>
+                      <option value="mL">mL</option>
+                    </select>
+                  </div>
+                </div>{" "}
+                <div>
+                  <label
+                    className="block text-sm font-medium mb-1"
+                    style={{ color: "rgb(75, 85, 99)" }}
+                  >
+                    Tipo de Instrumento
+                  </label>
+                  <div className="flex space-x-4">
+                    <label className="inline-flex items-center">
+                      <input
+                        type="radio"
+                        name="tipoInstrumento"
+                        value="monocanal"
+                        checked={formData.tipoInstrumento === "monocanal"}
+                        onChange={handleChange}
+                        className="form-radio h-5 w-5"
+                        style={{ color: "rgb(144, 199, 45)" }}
+                      />
+                      <span
+                        className="ml-2"
+                        style={{ color: "rgb(75, 85, 99)" }}
+                      >
+                        Monocanal
+                      </span>
+                    </label>
+                    <label className="inline-flex items-center">
+                      <input
+                        type="radio"
+                        name="tipoInstrumento"
+                        value="multicanal"
+                        checked={formData.tipoInstrumento === "multicanal"}
+                        onChange={handleChange}
+                        className="form-radio h-5 w-5"
+                        style={{ color: "rgb(144, 199, 45)" }}
+                      />
+                      <span
+                        className="ml-2"
+                        style={{ color: "rgb(75, 85, 99)" }}
+                      >
+                        Multicanal
+                      </span>
+                    </label>
+                  </div>
+                </div>{" "}
+                <div>
+                  <label
+                    className="block text-sm font-medium mb-1"
+                    style={{ color: "rgb(75, 85, 99)" }}
+                  >
+                    Faixa de Indicação
+                  </label>
+                  <input
+                    type="text"
+                    name="faixaIndicacao"
+                    value={formData.faixaIndicacao}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                    style={{
+                      "--tw-ring-color": "rgb(144, 199, 45)",
+                      color: "rgb(75, 85, 99)",
+                    }}
+                    placeholder="Ex: 100-1000 µL"
+                  />
+                </div>
+                <div>
+                  <label
+                    className="block text-sm font-medium mb-1"
+                    style={{ color: "rgb(75, 85, 99)" }}
+                  >
+                    Faixa Calibrada
+                  </label>
+                  <input
+                    type="text"
+                    name="faixaCalibrada"
+                    value={formData.faixaCalibrada}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                    style={{
+                      "--tw-ring-color": "rgb(144, 199, 45)",
+                      color: "rgb(75, 85, 99)",
+                    }}
+                    placeholder="Ex: 200-1000 µL"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+              {" "}
+              <div className="flex justify-between items-center mb-3">
+                <h3
+                  className="text-lg font-semibold flex items-center"
+                  style={{ color: "rgb(75, 85, 99)" }}
+                >
+                  <TrendingUp
+                    className="mr-2"
+                    style={{ color: "rgb(144, 199, 45)" }}
+                  />
+                  Pontos de Calibração
+                </h3>
+
+                <div className="flex space-x-2">
+                  {" "}
+                  <button
+                    type="button"
+                    onClick={() => setMostrarNotaCalculos(!mostrarNotaCalculos)}
+                    className={`flex items-center text-sm px-3 py-1.5 rounded-md border transition-colors duration-200 ${
+                      mostrarNotaCalculos
+                        ? "bg-blue-100 text-blue-800 border-blue-300"
+                        : "bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                    }`}
+                  >
+                    {mostrarNotaCalculos ? (
+                      <>
+                        <EyeOff className="mr-1" /> Ocultar Ajuda
+                      </>
+                    ) : (
+                      <>
+                        <Info className="mr-1" /> Como os cálculos são feitos?
+                      </>
+                    )}
+                  </button>{" "}
+                  <button
+                    type="button"
+                    className="flex items-center text-sm px-3 py-1.5 rounded-md border border-green-300 transition-colors"
+                    style={{
+                      backgroundColor: "rgb(240, 253, 244)",
+                      color: "rgb(144, 199, 45)",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.backgroundColor = "rgb(220, 252, 231)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.backgroundColor = "rgb(240, 253, 244)";
+                    }}
+                    onClick={adicionarPonto}
+                    title="Adicionar novo ponto de calibração"
+                  >
+                    <Plus className="mr-2" /> Adicionar Ponto
+                  </button>
+                </div>
+              </div>{" "}
+              {mostrarNotaCalculos && (
+                <div className="bg-blue-50 p-3 rounded-md mb-4 text-sm text-blue-700 border border-blue-200 animate-fade-in shadow-sm">
+                  <div className="flex items-start">
+                    {" "}
+                    <Calculator className="mr-2 mt-0.5 text-blue-500 flex-shrink-0" />
+                    <div className="flex-1">
+                      <div className="flex justify-between items-center mb-2">
+                        <p className="font-bold text-blue-800">
+                          Nota sobre os cálculos:
+                        </p>
+                        <button
+                          onClick={() => setMostrarNotaCalculos(false)}
+                          className="text-blue-500 hover:text-blue-700 p-1"
+                          title="Fechar"
+                        >
+                          <EyeOff size={14} />
+                        </button>
+                      </div>{" "}
+                      <p>
+                        Cole os valores das medições em{" "}
+                        <strong>massa (mg)</strong> separados por vírgulas. Os
+                        valores serão automaticamente convertidos para{" "}
+                        <strong>volume (µL)</strong> usando o fator Z, que varia
+                        de acordo com a temperatura do ambiente.
                       </p>
-                      <ul className="list-disc ml-4 mt-1">
-                        <li>
-                          <strong>Mean Volume:</strong> Média dos volumes
-                          individuais em <strong>µL</strong> (cada massa × Fator
-                          Z)
-                        </li>
-                        <li>
-                          <strong>Accuracy:</strong> Mean Volume - Volume
-                          Nominal
-                        </li>
-                        <li>
-                          <strong>Accuracy %:</strong> (Accuracy ÷ Volume
-                          Nominal) × 100
-                        </li>
-                        <li>
-                          <strong>Precision (SD):</strong> Desvio padrão dos
-                          volumes individuais
-                        </li>
-                        <li>
-                          <strong>Precision (CV):</strong> (SD ÷ Mean Volume) ×
-                          100%
-                        </li>
-                      </ul>
+                      <p>
+                        <strong>Exemplo de entrada:</strong> 99.2, 99.12, 99.17,
+                        99.16, 99.26
+                      </p>
+                      <p>Fórmula: Volume (µL) = Massa (mg) × Fator Z</p>{" "}
+                      <div className="mt-2 border-t border-blue-200 pt-2">
+                        <p className="font-bold text-blue-800 mb-1">
+                          Cálculos realizados:
+                        </p>
+                        <ul className="list-disc ml-4 mt-1">
+                          <li>
+                            <strong>Mean Volume:</strong> Média dos volumes
+                            individuais em <strong>µL</strong> (cada massa ×
+                            Fator Z)
+                          </li>
+                          <li>
+                            <strong>Accuracy:</strong> Mean Volume - Volume
+                            Nominal
+                          </li>
+                          <li>
+                            <strong>Accuracy %:</strong> (Accuracy ÷ Volume
+                            Nominal) × 100
+                          </li>
+                          <li>
+                            <strong>Precision (SD):</strong> Desvio padrão dos
+                            volumes individuais
+                          </li>
+                          <li>
+                            <strong>Precision (CV):</strong> (SD ÷ Mean Volume)
+                            × 100%
+                          </li>
+                        </ul>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
-            <div className="space-y-6">
-              {pontosCalibra.map((ponto, pontoIndex) => (
-                <div
-                  key={ponto.id}
-                  className="border border-gray-300 rounded-md p-3 bg-white relative"
-                >
-                  <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
-                    {" "}
-                    <div className="flex-1 min-w-[200px]">                      <label 
+              )}
+              <div className="space-y-6">
+                {pontosCalibra.map((ponto, pontoIndex) => (
+                  <div
+                    key={ponto.id}
+                    className="border border-gray-300 rounded-md p-3 bg-white relative"
+                  >
+                    <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+                      {" "}
+                      <div className="flex-1 min-w-[200px]">
+                        {" "}
+                        <label
+                          className="block text-sm font-medium mb-1"
+                          style={{ color: "rgb(75, 85, 99)" }}
+                        >
+                          Volume Nominal
+                        </label>
+                        <div className="flex">
+                          <input
+                            type="text"
+                            value={ponto.volumeNominal}
+                            onChange={(e) =>
+                              handleVolumeNominalChange(
+                                ponto.id,
+                                e.target.value
+                              )
+                            }
+                            placeholder="Volume nominal"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2"
+                            style={{
+                              "--tw-ring-color": "rgb(144, 199, 45)",
+                              color: "rgb(75, 85, 99)",
+                            }}
+                            required
+                          />
+                          <select
+                            value={ponto.unidade}
+                            onChange={(e) =>
+                              atualizarPontoCalibracao(
+                                ponto.id,
+                                "unidade",
+                                e.target.value
+                              )
+                            }
+                            className="px-3 py-2 border border-l-0 border-gray-300 rounded-r-md focus:outline-none focus:ring-2"
+                            style={{
+                              "--tw-ring-color": "rgb(144, 199, 45)",
+                              color: "rgb(75, 85, 99)",
+                            }}
+                          >
+                            <option value="µL">µL</option>
+                            <option value="mL">mL</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="px-3 py-2 rounded-md bg-gray-100 text-center border border-gray-200">
+                          <span className="text-xs text-gray-500">
+                            Ponto #{pontoIndex + 1}
+                          </span>
+                        </div>
+
+                        {pontosCalibra.length > 1 && (
+                          <button
+                            type="button"
+                            className="flex items-center px-2 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-md border border-red-200 transition-colors"
+                            onClick={() =>
+                              confirmarRemoverPonto(ponto.id, pontoIndex + 1)
+                            }
+                            title="Remover ponto de calibração"
+                          >
+                            <Trash2 className="mr-1" />{" "}
+                            <span className="text-xs">Remover</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>{" "}
+                    <div className="mb-4">
+                      <label
                         className="block text-sm font-medium mb-1"
                         style={{ color: "rgb(75, 85, 99)" }}
                       >
-                        Volume Nominal
+                        Medições (mg)
                       </label>
-                      <div className="flex">
-                        <input
-                          type="text"
-                          value={ponto.volumeNominal}
+                      <div className="space-y-2">
+                        <textarea
+                          value={ponto.valoresTexto || ""}
                           onChange={(e) =>
-                            handleVolumeNominalChange(ponto.id, e.target.value)
+                            handleValoresChange(ponto.id, e.target.value)
                           }
-                          placeholder="Volume nominal"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2"
+                          placeholder="Cole os valores separados por vírgula. Ex: 99.2, 99.12, 99.17, 99.16, 99.26"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 resize-none"
                           style={{
                             "--tw-ring-color": "rgb(144, 199, 45)",
                             color: "rgb(75, 85, 99)",
                           }}
-                          required
+                          rows="3"
                         />
-                        <select
-                          value={ponto.unidade}
-                          onChange={(e) =>
-                            atualizarPontoCalibracao(
-                              ponto.id,
-                              "unidade",
-                              e.target.value
-                            )
-                          }
-                          className="px-3 py-2 border border-l-0 border-gray-300 rounded-r-md focus:outline-none focus:ring-2"
-                          style={{
-                            "--tw-ring-color": "rgb(144, 199, 45)",
-                            color: "rgb(75, 85, 99)",
-                          }}
-                        >
-                          <option value="µL">µL</option>
-                          <option value="mL">mL</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="px-3 py-2 rounded-md bg-gray-100 text-center border border-gray-200">
-                        <span className="text-xs text-gray-500">
-                          Ponto #{pontoIndex + 1}
-                        </span>
-                      </div>
+                        <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded border border-blue-200">
+                          <strong>💡 Dica:</strong> Copie os valores do Notion e
+                          cole aqui.
+                          <br />
+                        </div>
 
-                      {pontosCalibra.length > 1 && (
-                        <button
-                          type="button"
-                          className="flex items-center px-2 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-md border border-red-200 transition-colors"
-                          onClick={() =>
-                            confirmarRemoverPonto(ponto.id, pontoIndex + 1)
-                          }
-                          title="Remover ponto de calibração"
-                        >
-                          <Trash2 className="mr-1" />{" "}
-                          <span className="text-xs">Remover</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>                  <div className="mb-4">
-                    <label 
-                      className="block text-sm font-medium mb-1"
-                      style={{ color: "rgb(75, 85, 99)" }}
-                    >
-                      Medições (mg)
-                    </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                      {ponto.medicoes.map((medicao, index) => (
-                        <input
-                          key={index}
-                          type="text"
-                          value={medicao}
-                          onChange={(e) =>
-                            handleMedicaoChange(ponto.id, index, e.target.value)
-                          }
-                          placeholder={`M${index + 1}`}
-                          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
-                          style={{
-                            "--tw-ring-color": "rgb(144, 199, 45)",
-                            color: "rgb(75, 85, 99)",
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </div>{" "}
-                  {/* Resultados dos cálculos */}
-                  {ponto.media !== null && (
-                    <div className="bg-gray-50 p-3 rounded-md">                      <h4 
-                        className="font-medium mb-2 flex items-center"
-                        style={{ color: "rgb(75, 85, 99)" }}
-                      >
-                        <Calculator 
-                          className="mr-2"
-                          style={{ color: "rgb(144, 199, 45)" }}
-                        />
-                        Resultados
-                      </h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                        {/* Mostrar os valores processados */}
+                        {ponto.medicoes.some((m) => m !== "") && (
+                          <div className="mt-2">
+                            <div className="text-xs text-gray-500 mb-1">
+                              Valores detectados:
+                            </div>
+                            <div className="grid grid-cols-5 gap-1">
+                              {ponto.medicoes
+                                .slice(0, 10)
+                                .map((medicao, index) => (
+                                  <div
+                                    key={index}
+                                    className={`px-2 py-1 text-xs rounded text-center ${
+                                      medicao !== ""
+                                        ? "bg-green-100 text-green-800 border border-green-200"
+                                        : "bg-gray-100 text-gray-400 border border-gray-200"
+                                    }`}
+                                  >
+                                    {medicao !== "" ? medicao : `M${index + 1}`}
+                                  </div>
+                                ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>{" "}
+                    {/* Resultados dos cálculos */}
+                    {ponto.media !== null && (
+                      <div className="bg-gray-50 p-3 rounded-md">
                         {" "}
-                        <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
-                          <div className="text-xs text-gray-500 mb-1">
-                            Mean Volume
+                        <h4
+                          className="font-medium mb-2 flex items-center"
+                          style={{ color: "rgb(75, 85, 99)" }}
+                        >
+                          <Calculator
+                            className="mr-2"
+                            style={{ color: "rgb(144, 199, 45)" }}
+                          />
+                          Resultados
+                        </h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                          {" "}
+                          <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
+                            <div className="text-xs text-gray-500 mb-1">
+                              Mean Volume
+                            </div>
+                            <div className="flex justify-between">
+                              {" "}
+                              <span className="font-medium">
+                                {ponto.mediaMassa?.toFixed(2)} mg
+                              </span>
+                              <span className="text-green-600 font-medium">
+                                {ponto.media?.toFixed(2)} µL
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              Massa média × Fator Z
+                            </div>
                           </div>
-                          <div className="flex justify-between">
-                            {" "}
-                            <span className="font-medium">
-                              {ponto.mediaMassa?.toFixed(2)} mg
-                            </span>
-                            <span className="text-green-600 font-medium">
-                              {ponto.media?.toFixed(2)} µL
-                            </span>
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            Massa média × Fator Z
-                          </div>
-                        </div>
-                        <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
-                          <div className="text-xs text-gray-500 mb-1">
-                            Accuracy
-                          </div>
-                          <div className="flex justify-between">
-                            {" "}
-                            <span className="font-medium">
-                              {ponto.inexatidao?.toFixed(2)} µL
-                            </span>
-                            <span
-                              className={
-                                Math.abs(ponto.inexatidaoPercentual) > 5
-                                  ? "text-red-600 font-medium"
-                                  : "text-green-600 font-medium"
-                              }
-                            >
-                              {ponto.inexatidaoPercentual?.toFixed(2)}%
-                            </span>
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            Mean Volume - Volume Nominal
-                          </div>
-                        </div>{" "}
-                        <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
-                          <div className="text-xs text-gray-500 mb-1">
-                            Precision
-                          </div>
-                          <div className="flex justify-between">
-                            {" "}
-                            <span className="font-medium">
-                              SD: {ponto.desvioPadrao?.toFixed(2)} µL
-                            </span>
-                            <span className="text-blue-600 font-medium">
-                              CV: {ponto.coeficienteVariacao?.toFixed(2)}%
-                            </span>
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            Desvio padrão e coeficiente de variação
+                          <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
+                            <div className="text-xs text-gray-500 mb-1">
+                              Accuracy
+                            </div>
+                            <div className="flex justify-between">
+                              {" "}
+                              <span className="font-medium">
+                                {ponto.inexatidao?.toFixed(2)} µL
+                              </span>
+                              <span
+                                className={
+                                  Math.abs(ponto.inexatidaoPercentual) > 5
+                                    ? "text-red-600 font-medium"
+                                    : "text-green-600 font-medium"
+                                }
+                              >
+                                {ponto.inexatidaoPercentual?.toFixed(2)}%
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              Mean Volume - Volume Nominal
+                            </div>
+                          </div>{" "}
+                          <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
+                            <div className="text-xs text-gray-500 mb-1">
+                              Precision
+                            </div>
+                            <div className="flex justify-between">
+                              {" "}
+                              <span className="font-medium">
+                                SD: {ponto.desvioPadrao?.toFixed(2)} µL
+                              </span>
+                              <span className="text-blue-600 font-medium">
+                                CV: {ponto.coeficienteVariacao?.toFixed(2)}%
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              Desvio padrão e coeficiente de variação
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              ))}{" "}
+                    )}
+                  </div>
+                ))}{" "}
+              </div>
+            </div>{" "}
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                className="text-white px-6 py-2 rounded-md focus:outline-none focus:ring-2"
+                style={{
+                  backgroundColor: "rgb(144, 199, 45)",
+                  "--tw-ring-color": "rgb(144, 199, 45)",
+                }}
+                onMouseEnter={(e) =>
+                  (e.target.style.backgroundColor = "rgb(130, 180, 40)")
+                }
+                onMouseLeave={(e) =>
+                  (e.target.style.backgroundColor = "rgb(144, 199, 45)")
+                }
+              >
+                Gerar Certificado
+              </button>
             </div>
-          </div>          <div className="flex justify-end">
-            <button
-              type="submit"
-              className="text-white px-6 py-2 rounded-md focus:outline-none focus:ring-2"
-              style={{
-                backgroundColor: "rgb(144, 199, 45)",
-                "--tw-ring-color": "rgb(144, 199, 45)",
+            {/* Diálogo de confirmação para remoção de ponto */}{" "}
+            <ConfirmDialog
+              isOpen={confirmDialog.isOpen}
+              title={confirmDialog.title}
+              message={confirmDialog.message}
+              onCancel={(e) => {
+                e.preventDefault(); // Evita o submit do formulário
+                setConfirmDialog({ ...confirmDialog, isOpen: false });
               }}
-              onMouseEnter={(e) =>
-                (e.target.style.backgroundColor = "rgb(130, 180, 40)")
-              }
-              onMouseLeave={(e) =>
-                (e.target.style.backgroundColor = "rgb(144, 199, 45)")
-              }
-            >
-              Gerar Certificado
-            </button>
-          </div>
-          {/* Diálogo de confirmação para remoção de ponto */}{" "}
-          <ConfirmDialog
-            isOpen={confirmDialog.isOpen}
-            title={confirmDialog.title}
-            message={confirmDialog.message}
-            onCancel={(e) => {
-              e.preventDefault(); // Evita o submit do formulário
-              setConfirmDialog({ ...confirmDialog, isOpen: false });
-            }}
-            onConfirm={(e) => {
-              e.preventDefault(); // Evita o submit do formulário
-              removerPonto(confirmDialog.pontoId);
-              setConfirmDialog({ ...confirmDialog, isOpen: false });
-            }}
-          />        </form>
-      )}
+              onConfirm={(e) => {
+                e.preventDefault(); // Evita o submit do formulário
+                removerPonto(confirmDialog.pontoId);
+                setConfirmDialog({ ...confirmDialog, isOpen: false });
+              }}
+            />{" "}
+          </form>
+        )}
       </div>
     </div>
   );
