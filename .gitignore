@@ -3,6 +3,8 @@ node_modules/
 
 # Arquivos de build
 /frontend/build
+/frontend/dist
+.vercel
 
 # Arquivos de ambiente
 .env

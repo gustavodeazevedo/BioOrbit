@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api/clientes';
+const API_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/clientes` : 'http://localhost:5000/api/clientes';
 
 // Configuração para incluir token em todas as requisições
 const getConfig = () => {
