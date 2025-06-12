@@ -4,15 +4,13 @@ services:
     env: node
     region: oregon
     plan: free
-    buildCommand: npm run install-backend
+    buildCommand: npm install && npm run install-backend
     startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
       - key: MONGODB_URI
-        fromDatabase:
-          name: bioorbit-db
-          property: connectionString
+        sync: false
       - key: JWT_SECRET
         generateValue: true
       - key: CORPORATE_TOKEN
