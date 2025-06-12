@@ -1,4 +1,14 @@
 {
+  "name": "bioorbit",
+  "version": "1.0.0",
+  "description": "Sistema BioOrbit - Full Stack Application",
+  "scripts": {
+    "start": "cd backend && npm start",
+    "dev": "cd backend && npm run dev",
+    "install-backend": "cd backend && npm install",
+    "install-frontend": "cd frontend && npm install",
+    "install-all": "npm run install-backend && npm run install-frontend"
+  },
   "dependencies": {
     "lucide-react": "^0.514.0"
   }
