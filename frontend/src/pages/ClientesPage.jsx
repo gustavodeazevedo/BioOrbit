@@ -64,13 +64,13 @@ const ClientesPage = () => {
           style={{ color: "rgb(144, 199, 45)" }}
           onClick={() => navigate("/dashboard")}
         >
-          <ArrowLeft className="mr-2" /> Voltar ao Dashboard
+          <ArrowLeft className="mr-2" /> Voltar
         </button>
         <h1
           className="text-2xl font-bold text-center"
           style={{ color: "rgb(144, 199, 45)" }}
         >
-          Gerenciamento de Clientes
+          Gerenciar Clientes
         </h1>
         <div>{/* Espaço para equilibrar o layout */}</div>
       </div>
