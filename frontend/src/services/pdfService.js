@@ -46,69 +46,85 @@ export class PDFService {
 
         // Carregar a imagem do rodapé
         const imagemRodape = await PDFService.carregarImagemRodape();        // Gerar número do certificado baseado na série
-        const numeroCertificado = `CAL – ${dadosCertificado.numeroCertificado || 'XXXX'}/25`;
-
-        const docDefinition = {
+        const numeroCertificado = `CAL – ${dadosCertificado.numeroCertificado || 'XXXX'}/25`; const docDefinition = {
             pageSize: 'A4',
-            pageMargins: [40, 40, 40, 100], // Aumentada a margem inferior para 100 para acomodar melhor o rodapé
+            pageMargins: [40, imagemCabecalho ? 140 : 80, 40, imagemRodape ? 140 : 100],
             defaultStyle: {
                 font: 'Roboto'
+            },            // Cabeçalho em todas as páginas
+            header: function (currentPage, pageCount) {
+                // Margens diferentes para monocanal vs multicanal
+                const isMonocanal = dadosCertificado.tipoInstrumento === 'monocanal';
+
+                return imagemCabecalho ? {
+                    image: imagemCabecalho,
+                    width: 515,
+                    alignment: 'center',
+                    margin: isMonocanal ? [0, 4, 0, 10] : [0, 20, 0, 10]
+                } : {
+                    stack: [
+                        {
+                            text: 'Bio Research do Brasil Instrumentação Científica Ltda',
+                            style: 'companyName',
+                            alignment: 'center',
+                            margin: [0, 20, 0, 5]
+                        },
+                        {
+                            text: 'CNPJ: 14.088.552/0001-92',
+                            style: 'companyInfo',
+                            alignment: 'center',
+                            margin: [0, 0, 0, 3]
+                        },
+                        {
+                            text: 'Tel: (85) 3286-8748 | e-mail: bioorbit@bioorbit.com.br',
+                            style: 'companyInfo',
+                            alignment: 'center',
+                            margin: [0, 0, 0, 20]
+                        }
+                    ],
+                    margin: [40, 20, 40, 10]
+                };
             },
-            // Faixa vertical verde no lado esquerdo como elemento decorativo
+            // Rodapé em todas as páginas
+            footer: function (currentPage, pageCount) {
+                if (imagemRodape) {
+                    return {
+                        image: imagemRodape,
+                        width: 595,
+                        alignment: 'center',
+                        margin: [0, 21, 0, 20]
+                    };
+                }
+                return null;
+            },            // Faixa vertical verde no lado esquerdo como elemento decorativo
             background: function (currentPage, pageSize) {
+                const isMonocanal = dadosCertificado.tipoInstrumento === 'monocanal';
+
                 return [
                     {
                         canvas: [
                             {
                                 type: 'rect',
                                 x: 0,
-                                y: 125,
+                                y: isMonocanal
+                                    ? (imagemCabecalho ? 113 : 60)
+                                    : (imagemCabecalho ? 140 : 80),
                                 w: 20,
-                                h: 585, // Altura limitada para não sobrepor o rodapé (posicionado em y: 725)
+                                h: isMonocanal
+                                    ? pageSize.height - (imagemCabecalho ? 120 : 60) - (imagemRodape ? 140 : 100)
+                                    : pageSize.height - (imagemCabecalho ? 140 : 80) - (imagemRodape ? 140 : 100),
                                 color: '#D8E9A8'
                             }
                         ]
                     }
                 ];
-            },
-            footer: null, // Removemos o footer padrão para adicionar o rodapé no conteúdo principal
-
-
-            content: [
-                // 1. Cabeçalho da empresa (imagem ou texto como fallback)
-                ...(imagemCabecalho ? [
-                    {
-                        image: imagemCabecalho,
-                        width: 515, // Largura máxima (A4 width 595 - margins 40*2 = 515)
-                        alignment: 'center',
-                        margin: [0, -20, 0, 10] // Posição mais ao topo com margem negativa
-                    }
-                ] : [
-                    // Fallback para cabeçalho em texto
-                    {
-                        text: 'Bio Research do Brasil Instrumentação Científica Ltda',
-                        style: 'companyName',
-                        alignment: 'center',
-                        margin: [0, 0, 0, 5]
-                    },
-                    {
-                        text: 'CNPJ: 14.088.552/0001-92',
-                        style: 'companyInfo',
-                        alignment: 'center',
-                        margin: [0, 0, 0, 3]
-                    },
-                    {
-                        text: 'Tel: (85) 3286-8748 | e-mail: bioorbit@bioorbit.com.br',
-                        style: 'companyInfo',
-                        alignment: 'center',
-                        margin: [0, 0, 0, 20]
-                    }
-                ]),                // 2. Título centralizado em destaque
+            }, content: [
+                // Conteúdo principal                // 1. Título do certificado (obrigatório na primeira página)
                 {
                     text: `CERTIFICADO DE CALIBRAÇÃO - BIORESEARCH DO BRASIL - Nº ${numeroCertificado}`,
                     style: 'title',
                     alignment: 'left',
-                    margin: [0, 20, 0, 8]
+                    margin: dadosCertificado.tipoInstrumento === 'monocanal' ? [0, -30, 0, 2] : [0, 0, 0, 2]
                 },
                 {
                     text: 'LABORATÓRIO DE CALIBRAÇÃO E ENSAIO',
@@ -117,16 +133,18 @@ export class PDFService {
                     margin: [0, 0, 0, 25]
                 },
 
-                // 3. Dados do cliente e instrumento
-                ...PDFService.criarBlocoDados(dadosCertificado, cliente),                // 4. Tabela de medições
+                // 2. Dados do cliente e instrumento
+                ...PDFService.criarBlocoDados(dadosCertificado, cliente),
+
+                // 3. Tabela de medições
                 {
                     text: 'Tabela de Valores Obtidos:',
                     style: 'sectionTitle',
                     margin: [0, 0, 0, 10]
                 },
-                ...PDFService.criarTabelasMedicoes(pontosCalibra),
+                ...PDFService.criarTabelasMedicoes(pontosCalibra, dadosCertificado),
 
-                // 5. Padrões utilizados
+                // 4. Padrões utilizados
                 {
                     text: 'Padrões Utilizados:',
                     style: 'sectionTitle',
@@ -139,15 +157,13 @@ export class PDFService {
                     ],
                     style: 'normalText',
                     margin: [0, 0, 0, 15]
-                },
-
-                // 6. Parâmetros ambientais
+                },                // 5. Parâmetros ambientais
                 {
                     text: 'Parâmetros:',
                     style: 'sectionTitle',
                     margin: [0, 0, 0, 8]
                 },
-                ...PDFService.criarBlocoParametros(dadosCertificado, fatorZ),                // 7. Assinatura
+                ...PDFService.criarBlocoParametros(dadosCertificado, fatorZ),                // 6. Assinatura
                 {
                     stack: [
                         ...(imagemAssinatura ? [
@@ -202,14 +218,9 @@ export class PDFService {
                                 style: 'signatureSubtext',
                                 alignment: 'center'
                             }
-                        ]),
-                    ], margin: [0, 10, 0, 0]  // Margem reduzida de 30 para 10 no topo para mover para cima
-                },                // Adicionar o rodapé como último elemento, com posicionamento absoluto
-                imagemRodape && {
-                    absolutePosition: { x: 40, y: 725 }, // Posição mais para baixo (y aumentado) e mais à esquerda (x reduzido)
-                    image: imagemRodape,
-                    width: 595, // Largura aumentada para preencher melhor o rodapé
-                    alignment: 'center'
+                        ]),                    ],
+                    margin: dadosCertificado.tipoInstrumento === 'monocanal' ? [0, 1, 0, 0] : [0, 5, 0, 0],
+                    unbreakable: true
                 }
             ], styles: {
                 companyName: {
@@ -234,13 +245,20 @@ export class PDFService {
                     fontSize: 12,
                     bold: true,
                     color: '#000000'
-                },
-                sectionTitle: {
+                }, sectionTitle: {
                     font: 'Roboto',
                     fontSize: 12,
                     bold: true,
                     color: '#000000',
                     margin: [0, 5, 0, 5]
+                }, canalTitle: {
+                    font: 'Roboto',
+                    fontSize: 10,
+                    bold: true,
+                    italics: false,
+                    color: '#000000',
+                    margin: [0, 15, 0, 10],
+                    lineHeight: 1.2
                 },
                 normalText: {
                     font: 'Roboto',
@@ -286,22 +304,18 @@ export class PDFService {
                 // Novo estilo para textos dinâmicos (sem negrito)
                 dynamicText: {
                     font: 'Roboto',
-                    fontSize: 10,
+                    fontSize: 11,
                     bold: false,
                     color: '#000000',
                     lineHeight: 1.2
-                },
-                signature: {
-                    font: 'Roboto',
-                    fontSize: 12,
-                    bold: true,
-                    color: '#000000'
                 }
             }
         };
 
         return pdfMake.createPdf(docDefinition);
-    }    /**
+    }
+
+    /**
      * Carrega a imagem do cabeçalho com múltiplos fallbacks
      * @returns {Promise<string|null>} - Imagem em base64 ou null se falhar
      */
@@ -452,14 +466,62 @@ export class PDFService {
                     { text: `${new Date().toLocaleDateString('pt-BR')}`, style: 'dynamicText' }
                 ],
                 margin: [0, 0, 0, 15]
-            }
-        ];
-    }    /**
+            }];
+    }
+
+    /**
      * Cria tabelas de medições para cada ponto com bordas
      */
-    static criarTabelasMedicoes(pontosCalibra) {
-        // Sempre coloca todos os pontos lado a lado, independente da quantidade
-        return PDFService.criarTabelasLadoALado(pontosCalibra);
+    static criarTabelasMedicoes(pontosCalibra, dadosCertificado = {}) {
+        // Verificar se é multicanal e tem propriedade canal nos pontos
+        const isMulticanal = dadosCertificado.tipoInstrumento === 'multicanal';
+        const temCanais = pontosCalibra.length > 0 && pontosCalibra[0].hasOwnProperty('canal');
+
+        if (isMulticanal && temCanais) {
+            return PDFService.criarTabelasMulticanal(pontosCalibra);
+        } else {
+            // Sempre coloca todos os pontos lado a lado para monocanal
+            return PDFService.criarTabelasLadoALado(pontosCalibra);
+        }
+    }    /**
+     * Cria tabelas organizadas por canal para micropipetas multicanais
+     */
+    static criarTabelasMulticanal(pontosCalibra) {
+        const tabelas = [];
+
+        // Agrupar pontos por canal
+        const pontosPorCanal = {};
+        pontosCalibra.forEach(ponto => {
+            if (!pontosPorCanal[ponto.canal]) {
+                pontosPorCanal[ponto.canal] = [];
+            }
+            pontosPorCanal[ponto.canal].push(ponto);
+        });
+
+        // Ordenar canais numericamente
+        const canaisOrdenados = Object.keys(pontosPorCanal).sort((a, b) => parseInt(a) - parseInt(b)); canaisOrdenados.forEach((canal, canalIndex) => {
+            const pontosDoCanal = pontosPorCanal[canal];
+
+            // Criar as tabelas dos pontos deste canal
+            const tabelasDoCanal = PDFService.criarTabelasLadoALado(pontosDoCanal);
+
+            // Agrupar título e tabelas do canal em um bloco não quebrável
+            const blocoCanal = {
+                stack: [
+                    {
+                        text: `Canal ${canal}:`,
+                        style: 'canalTitle',
+                        margin: [0, canalIndex === 0 ? 0 : 20, 0, 10]
+                    },
+                    ...tabelasDoCanal
+                ],
+                unbreakable: true
+            };
+
+            tabelas.push(blocoCanal);
+        });
+
+        return tabelas;
     }
 
     /**
@@ -473,6 +535,7 @@ export class PDFService {
                 table: {
                     headerRows: 0,
                     widths: [110, 10, 50],
+                    dontBreakRows: true,
                     body: [[
                         { text: `Ponto ${index + 1} de medição`, style: 'staticTextTable' },
                         { text: ':', style: 'staticTextTable', alignment: 'center' },
@@ -619,13 +682,12 @@ export class PDFService {
 
                     return colunas;
                 })
-            ];
-
-            tabelas.push({
+            ]; tabelas.push({
                 table: {
                     headerRows: 0,
                     widths: config.widths,
-                    body: linhas
+                    body: linhas,
+                    dontBreakRows: true
                 }, layout: {
                     hLineWidth: (i, node) => (i === 0 || i === node.table.body.length) ? 1 : 0,
                     vLineWidth: (i, node) => {
@@ -689,8 +751,9 @@ export class PDFService {
         return blocos;
     }    /**
      * Cria o bloco de parâmetros ambientais
-     */
-    static criarBlocoParametros(dadosCertificado, fatorZ) {
+     */    static criarBlocoParametros(dadosCertificado, fatorZ) {
+        const isMonocanal = dadosCertificado.tipoInstrumento === 'monocanal';
+
         return [
             {
                 text: [
@@ -702,7 +765,7 @@ export class PDFService {
                     { text: `${PDFService.formatarFatorZ(fatorZ)} µL/mg\n`, style: 'dynamicText' }, { text: 'Prova de acordo                 : ', style: 'staticText' },
                     { text: 'ISO8655', style: 'dynamicText' }
                 ],
-                margin: [0, 0, 0, 5] // Reduzimos a margem inferior de 15 para 5 para aproximar a assinatura
+                margin: isMonocanal ? [0, 0, 0, -3] : [0, 0, 0, 2] // Margem negativa para monocanal
             }
         ];
     }

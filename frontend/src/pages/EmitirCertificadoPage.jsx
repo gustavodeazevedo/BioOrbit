@@ -48,6 +48,7 @@ const EmitirCertificadoPage = () => {
     faixaIndicacao: "", // Faixa de indicação da pipeta
     faixaCalibrada: "", // Faixa calibrada da pipeta
     tipoInstrumento: "monocanal", // Tipo de instrumento (monocanal/multicanal)
+    quantidadeCanais: 8, // Quantidade de canais para multicanal (8 ou 12)
     temperatura: "20.0",
     umidadeRelativa: "50",
     // Novos campos para aprimorar o certificado
@@ -60,9 +61,9 @@ const EmitirCertificadoPage = () => {
     validadeCalibracao: "12", // Validade em meses
     condicoesAmbientaisControladas: true,
   });
-  const [certificadoGerado, setCertificadoGerado] = useState(false);
-  // Fator Z calculado com base na temperatura
-  const [fatorZ, setFatorZ] = useState(1.0029); // Valor padrão para 20°C  // Estado para os pontos de calibração
+  const [certificadoGerado, setCertificadoGerado] = useState(false); // Fator Z calculado com base na temperatura
+  const [fatorZ, setFatorZ] = useState(1.0029); // Valor padrão para 20°C
+  // Estado para os pontos de calibração
   const [pontosCalibra, setPontosCalibra] = useState([
     {
       id: 1,
@@ -77,6 +78,10 @@ const EmitirCertificadoPage = () => {
       desvioPadrao: null,
     },
   ]);
+  // Estado para controlar o número de canais (para multicanal)
+  const [numeroCanais, setNumeroCanais] = useState(1);
+  // Estado para controlar a quantidade de canais selecionada pelo usuário
+  const [quantidadeCanais, setQuantidadeCanais] = useState(8); // 8 ou 12 canais
 
   // Estado para controlar a visibilidade da nota explicativa sobre cálculos
   const [mostrarNotaCalculos, setMostrarNotaCalculos] = useState(false);
@@ -170,7 +175,6 @@ const EmitirCertificadoPage = () => {
 
     fetchClienteData();
   }, [id, location]);
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     const camposNumericos = ["temperatura", "umidadeRelativa", "capacidade"];
@@ -190,6 +194,21 @@ const EmitirCertificadoPage = () => {
         ...formData,
         [name]: valorFormatado,
       });
+    } else if (name === "tipoInstrumento") {
+      // Quando o tipo de instrumento muda, reorganiza os pontos de calibração
+      if (value === "multicanal") {
+        // Para multicanal, cria grupos de 3 pontos por canal
+        reorganizarPontosParaMulticanal();
+      } else {
+        // Para monocanal, volta ao layout padrão
+        reorganizarPontosParaMonocanal();
+      }
+
+      setFormData({
+        ...formData,
+        [name]: value,
+        quantidadeCanais: value === "multicanal" ? quantidadeCanais : 1,
+      });
     } else {
       setFormData({
         ...formData,
@@ -197,7 +216,6 @@ const EmitirCertificadoPage = () => {
       });
     }
   };
-
   // Manipula mudanças diretas nos controles de temperatura (botões + e -)
   const alterarTemperatura = (incremento) => {
     const temperaturaAtual = parseFloat(formData.temperatura);
@@ -209,6 +227,91 @@ const EmitirCertificadoPage = () => {
         ...formData,
         temperatura: novaTemperatura,
       });
+    }
+  };
+  // Função para reorganizar pontos para layout multicanal
+  const reorganizarPontosParaMulticanal = () => {
+    // Usar a quantidade de canais selecionada pelo usuário
+    const novosCanais = quantidadeCanais; // 8 ou 12 canais conforme seleção
+    const pontosPorCanal = 3;
+    const novosPontos = [];
+
+    for (let canal = 1; canal <= novosCanais; canal++) {
+      for (let ponto = 1; ponto <= pontosPorCanal; ponto++) {
+        novosPontos.push({
+          id: Date.now() + canal * 100 + ponto,
+          volumeNominal: "",
+          unidade: "µL",
+          medicoes: Array(10).fill(""),
+          valoresTexto: "",
+          media: null,
+          mediaMassa: null,
+          inexatidao: null,
+          inexatidaoPercentual: null,
+          desvioPadrao: null,
+          canal: canal, // Identificador do canal
+          pontoPosicao: ponto, // Posição do ponto dentro do canal
+        });
+      }
+    }
+
+    setPontosCalibra(novosPontos);
+    setNumeroCanais(novosCanais);
+  };
+  // Função para reorganizar pontos para layout monocanal
+  const reorganizarPontosParaMonocanal = () => {
+    // Volta ao layout padrão com um ponto
+    setPontosCalibra([
+      {
+        id: Date.now(),
+        volumeNominal: "",
+        unidade: "µL",
+        medicoes: Array(10).fill(""),
+        valoresTexto: "",
+        media: null,
+        mediaMassa: null,
+        inexatidao: null,
+        inexatidaoPercentual: null,
+        desvioPadrao: null,
+      },
+    ]);
+    setNumeroCanais(1);
+  };  // Função para lidar com mudança na quantidade de canais
+  const handleQuantidadeCanaisChange = (novaQuantidade) => {
+    setQuantidadeCanais(novaQuantidade);
+    
+    // Atualizar também o formData
+    setFormData({
+      ...formData,
+      quantidadeCanais: novaQuantidade,
+    });
+    
+    // Se já estiver em modo multicanal, reorganiza os pontos com a nova quantidade
+    if (formData.tipoInstrumento === "multicanal") {
+      const pontosPorCanal = 3;
+      const novosPontos = [];
+      
+      for (let canal = 1; canal <= novaQuantidade; canal++) {
+        for (let ponto = 1; ponto <= pontosPorCanal; ponto++) {
+          novosPontos.push({
+            id: Date.now() + canal * 100 + ponto,
+            volumeNominal: "",
+            unidade: "µL",
+            medicoes: Array(10).fill(""),
+            valoresTexto: "",
+            media: null,
+            mediaMassa: null,
+            inexatidao: null,
+            inexatidaoPercentual: null,
+            desvioPadrao: null,
+            canal: canal,
+            pontoPosicao: ponto,
+          });
+        }
+      }
+      
+      setPontosCalibra(novosPontos);
+      setNumeroCanais(novaQuantidade);
     }
   };
   const handleSubmit = (e) => {
@@ -303,29 +406,78 @@ const EmitirCertificadoPage = () => {
     } - ${bairro} - ${cidade}/${estado} - CEP: ${cep}`;
   }; // Função para adicionar um novo ponto de calibração
   const adicionarPontoCalibracao = () => {
-    const novoPonto = {
-      id: Date.now(),
-      volumeNominal: "",
-      unidade: "µL",
-      medicoes: Array(10).fill(""),
-      valoresTexto: "",
-      media: null,
-      mediaMassa: null,
-      inexatidao: null,
-      inexatidaoPercentual: null,
-      desvioPadrao: null,
-    };
+    if (formData.tipoInstrumento === "multicanal") {
+      // Para multicanal, adicionar um novo canal completo
+      const novoCanal = numeroCanais + 1;
+      const pontosPorCanal = 3;
+      const novosPontos = [];
 
-    setPontosCalibra([...pontosCalibra, novoPonto]);
+      // Verificar se não ultrapassou o limite de canais
+      if (novoCanal > quantidadeCanais) {
+        alert(`Limite máximo de ${quantidadeCanais} canais atingido.`);
+        return;
+      }
+
+      for (let ponto = 1; ponto <= pontosPorCanal; ponto++) {
+        novosPontos.push({
+          id: Date.now() + novoCanal * 100 + ponto,
+          volumeNominal: "",
+          unidade: "µL",
+          medicoes: Array(10).fill(""),
+          valoresTexto: "",
+          media: null,
+          mediaMassa: null,
+          inexatidao: null,
+          inexatidaoPercentual: null,
+          desvioPadrao: null,
+          canal: novoCanal,
+          pontoPosicao: ponto,
+        });
+      }
+
+      setPontosCalibra([...pontosCalibra, ...novosPontos]);
+      setNumeroCanais(novoCanal);
+    } else {
+      // Para monocanal, adicionar um ponto individual
+      const novoPonto = {
+        id: Date.now(),
+        volumeNominal: "",
+        unidade: "µL",
+        medicoes: Array(10).fill(""),
+        valoresTexto: "",
+        media: null,
+        mediaMassa: null,
+        inexatidao: null,
+        inexatidaoPercentual: null,
+        desvioPadrao: null,
+      };
+
+      setPontosCalibra([...pontosCalibra, novoPonto]);
+    }
   };
-
   // Função para remover um ponto de calibração
   const removerPontoCalibracao = (id) => {
-    if (pontosCalibra.length <= 1) {
-      alert("É necessário manter pelo menos um ponto de calibração.");
-      return;
+    if (formData.tipoInstrumento === "multicanal") {
+      // Para multicanal, remover o canal inteiro
+      const ponto = pontosCalibra.find((p) => p.id === id);
+      if (ponto && numeroCanais > 1) {
+        // Remove todos os pontos do canal
+        const pontosRestantes = pontosCalibra.filter(
+          (p) => p.canal !== ponto.canal
+        );
+        setPontosCalibra(pontosRestantes);
+        setNumeroCanais(numeroCanais - 1);
+      } else if (numeroCanais === 1) {
+        alert("É necessário manter pelo menos um canal de calibração.");
+      }
+    } else {
+      // Para monocanal, remover ponto individual
+      if (pontosCalibra.length <= 1) {
+        alert("É necessário manter pelo menos um ponto de calibração.");
+        return;
+      }
+      setPontosCalibra(pontosCalibra.filter((ponto) => ponto.id !== id));
     }
-    setPontosCalibra(pontosCalibra.filter((ponto) => ponto.id !== id));
   };
 
   // Função para atualizar um ponto de calibração
@@ -652,30 +804,50 @@ const EmitirCertificadoPage = () => {
       },
     ]);
   }; // Função para mostrar diálogo de confirmação de remoção
-  const confirmarRemoverPonto = (id, numeroPonto) => {
-    if (pontosCalibra.length <= 1) {
+  const confirmarRemoverPonto = (id, numeroPonto, isCanal = false) => {
+    if (formData.tipoInstrumento === "multicanal" && isCanal) {
+      if (numeroCanais <= 1) {
+        setConfirmDialog({
+          isOpen: true,
+          title: "Não é possível remover",
+          message: "É necessário ter pelo menos um canal de calibração.",
+          pontoId: null,
+          type: "info",
+        });
+        return;
+      }
+
       setConfirmDialog({
         isOpen: true,
-        title: "Não é possível remover",
-        message: "É necessário ter pelo menos um ponto de calibração.",
-        pontoId: null,
-        type: "info",
+        title: "Remover canal de calibração",
+        message: `Tem certeza que deseja remover o canal ${numeroPonto} completo? Todos os 3 pontos de calibração deste canal serão removidos.`,
+        pontoId: id,
+        type: "warning",
       });
-      return;
+    } else {
+      if (pontosCalibra.length <= 1) {
+        setConfirmDialog({
+          isOpen: true,
+          title: "Não é possível remover",
+          message: "É necessário ter pelo menos um ponto de calibração.",
+          pontoId: null,
+          type: "info",
+        });
+        return;
+      }
+
+      setConfirmDialog({
+        isOpen: true,
+        title: "Remover ponto de calibração",
+        message: `Tem certeza que deseja remover o ponto de calibração #${numeroPonto}?`,
+        pontoId: id,
+        type: "warning",
+      });
     }
-
-    setConfirmDialog({
-      isOpen: true,
-      title: "Remover ponto de calibração",
-      message: `Tem certeza que deseja remover o ponto de calibração #${numeroPonto}?`,
-      pontoId: id,
-      type: "warning",
-    });
   };
-
   // Função para remover um ponto de calibração
   const removerPonto = (id) => {
-    setPontosCalibra(pontosCalibra.filter((ponto) => ponto.id !== id));
+    removerPontoCalibracao(id);
     // Fecha o modal de confirmação
     setConfirmDialog({ ...confirmDialog, isOpen: false });
   }; // Função para processar valores separados por vírgula em um único input
@@ -706,14 +878,19 @@ const EmitirCertificadoPage = () => {
         return ponto;
       })
     );
-  };
-  // Função para atualizar o volume nominal de um ponto
+  };  // Função para atualizar o volume nominal de um ponto
   const handleVolumeNominalChange = (pontoId, valor) => {
     // Usa a função de formatação de números da pasta utils
     const valorFormatado = formatNumberInput(valor);
 
+    // Encontrar o ponto que está sendo modificado
+    const pontoAtual = pontosCalibra.find(p => p.id === pontoId);
+    const isCanal1 = pontoAtual && pontoAtual.canal === 1;
+    const isMulticanal = formData.tipoInstrumento === "multicanal";
+
     setPontosCalibra(
       pontosCalibra.map((ponto) => {
+        // Atualizar o ponto atual
         if (ponto.id === pontoId) {
           // Filtrar medições válidas
           const medicoesValidas = ponto.medicoes
@@ -769,6 +946,7 @@ const EmitirCertificadoPage = () => {
             coeficienteVariacao =
               media !== null && media !== 0 ? (desvioPadrao / media) * 100 : 0;
           }
+          
           return {
             ...ponto,
             volumeNominal: valorFormatado,
@@ -791,6 +969,54 @@ const EmitirCertificadoPage = () => {
                 : null,
           };
         }
+        
+        // Se for multicanal e estamos alterando o canal 1, sincronizar com outros canais
+        else if (isMulticanal && isCanal1 && ponto.canal !== 1 && ponto.pontoPosicao === pontoAtual.pontoPosicao) {
+          return {
+            ...ponto,
+            volumeNominal: valorFormatado,
+            // Recalcular este ponto também se tiver medições
+            ...(ponto.medicoes.some(m => m !== "") ? (() => {
+              const medicoesValidas = ponto.medicoes
+                .map((m) => parseFloat(m))
+                .filter((m) => !isNaN(m));
+
+              if (medicoesValidas.length === 0) return {};
+
+              const mediaMassa = medicoesValidas.reduce((sum, val) => sum + val, 0) / medicoesValidas.length;
+              const volumesIndividuais = medicoesValidas.map((massa) => massa * fatorZ);
+              const media = volumesIndividuais.reduce((sum, vol) => sum + vol, 0) / volumesIndividuais.length;
+              
+              let inexatidao = null;
+              let inexatidaoPercentual = null;
+              if (valorFormatado !== "") {
+                const volumeNominal = parseFloat(valorFormatado);
+                inexatidao = media - volumeNominal;
+                inexatidaoPercentual = (inexatidao / volumeNominal) * 100;
+              }
+
+              let desvioPadrao = null;
+              let coeficienteVariacao = null;
+              if (volumesIndividuais.length > 1) {
+                const somaDosQuadrados = volumesIndividuais.reduce(
+                  (sum, vol) => sum + Math.pow(vol - media, 2), 0
+                );
+                desvioPadrao = Math.sqrt(somaDosQuadrados / (volumesIndividuais.length - 1));
+                coeficienteVariacao = media !== 0 ? (desvioPadrao / media) * 100 : 0;
+              }
+
+              return {
+                media: parseFloat(media.toFixed(2)),
+                mediaMassa: parseFloat(mediaMassa.toFixed(2)),
+                inexatidao: inexatidao !== null ? parseFloat(inexatidao.toFixed(2)) : null,
+                inexatidaoPercentual: inexatidaoPercentual !== null ? parseFloat(inexatidaoPercentual.toFixed(2)) : null,
+                desvioPadrao: desvioPadrao !== null ? parseFloat(desvioPadrao.toFixed(2)) : null,
+                coeficienteVariacao: coeficienteVariacao !== null ? parseFloat(coeficienteVariacao.toFixed(2)) : null,
+              };
+            })() : {})
+          };
+        }
+        
         return ponto;
       })
     );
@@ -1359,6 +1585,61 @@ const EmitirCertificadoPage = () => {
                       </span>
                     </label>
                   </div>
+
+                  {/* Seleção de quantidade de canais - só aparece quando multicanal está selecionado */}
+                  {formData.tipoInstrumento === "multicanal" && (
+                    <div className="mt-3 p-3 bg-blue-50 rounded-md border border-blue-200">
+                      <label
+                        className="block text-sm font-medium mb-2"
+                        style={{ color: "rgb(75, 85, 99)" }}
+                      >
+                        Quantidade de Canais
+                      </label>
+                      <div className="flex space-x-4">
+                        <label className="inline-flex items-center">
+                          <input
+                            type="radio"
+                            name="quantidadeCanais"
+                            value="8"
+                            checked={quantidadeCanais === 8}
+                            onChange={(e) =>
+                              handleQuantidadeCanaisChange(
+                                parseInt(e.target.value)
+                              )
+                            }
+                            className="form-radio h-4 w-4"
+                            style={{ color: "rgb(144, 199, 45)" }}
+                          />
+                          <span
+                            className="ml-2 text-sm"
+                            style={{ color: "rgb(75, 85, 99)" }}
+                          >
+                            8 Canais
+                          </span>
+                        </label>
+                        <label className="inline-flex items-center">
+                          <input
+                            type="radio"
+                            name="quantidadeCanais"
+                            value="12"
+                            checked={quantidadeCanais === 12}
+                            onChange={(e) =>
+                              handleQuantidadeCanaisChange(
+                                parseInt(e.target.value)
+                              )
+                            }
+                            className="form-radio h-4 w-4"
+                            style={{ color: "rgb(144, 199, 45)" }}
+                          />
+                          <span
+                            className="ml-2 text-sm"
+                            style={{ color: "rgb(75, 85, 99)" }}
+                          >
+                            12 Canais
+                          </span>                        </label>
+                      </div>
+                    </div>
+                  )}
                 </div>{" "}
                 <div>
                   <label
@@ -1418,6 +1699,11 @@ const EmitirCertificadoPage = () => {
                     style={{ color: "rgb(144, 199, 45)" }}
                   />
                   Pontos de Calibração
+                  {formData.tipoInstrumento === "multicanal" && (
+                    <span className="ml-2 text-sm px-2 py-1 bg-blue-100 text-blue-800 rounded-md">
+                      {quantidadeCanais} Canais
+                    </span>
+                  )}
                 </h3>
                 <div className="flex space-x-2">
                   {" "}
@@ -1442,21 +1728,61 @@ const EmitirCertificadoPage = () => {
                   </button>{" "}
                   <button
                     type="button"
-                    className="flex items-center text-sm px-3 py-1.5 rounded-md border border-green-300 transition-colors"
+                    className={`flex items-center text-sm px-3 py-1.5 rounded-md border transition-colors ${
+                      formData.tipoInstrumento === "multicanal" &&
+                      numeroCanais >= quantidadeCanais
+                        ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                        : "border-green-300"
+                    }`}
                     style={{
-                      backgroundColor: "rgb(240, 253, 244)",
-                      color: "rgb(144, 199, 45)",
+                      backgroundColor:
+                        formData.tipoInstrumento === "multicanal" &&
+                        numeroCanais >= quantidadeCanais
+                          ? "rgb(243, 244, 246)"
+                          : "rgb(240, 253, 244)",
+                      color:
+                        formData.tipoInstrumento === "multicanal" &&
+                        numeroCanais >= quantidadeCanais
+                          ? "rgb(156, 163, 175)"
+                          : "rgb(144, 199, 45)",
                     }}
                     onMouseEnter={(e) => {
-                      e.target.style.backgroundColor = "rgb(220, 252, 231)";
+                      if (
+                        !(
+                          formData.tipoInstrumento === "multicanal" &&
+                          numeroCanais >= quantidadeCanais
+                        )
+                      ) {
+                        e.target.style.backgroundColor = "rgb(220, 252, 231)";
+                      }
                     }}
                     onMouseLeave={(e) => {
-                      e.target.style.backgroundColor = "rgb(240, 253, 244)";
+                      if (
+                        !(
+                          formData.tipoInstrumento === "multicanal" &&
+                          numeroCanais >= quantidadeCanais
+                        )
+                      ) {
+                        e.target.style.backgroundColor = "rgb(240, 253, 244)";
+                      }
                     }}
-                    onClick={adicionarPonto}
-                    title="Adicionar novo ponto de calibração"
+                    onClick={adicionarPontoCalibracao}
+                    title={
+                      formData.tipoInstrumento === "multicanal"
+                        ? numeroCanais >= quantidadeCanais
+                          ? `Limite máximo de ${quantidadeCanais} canais atingido`
+                          : `Adicionar novo canal de calibração (${numeroCanais}/${quantidadeCanais})`
+                        : "Adicionar novo ponto de calibração"
+                    }
+                    disabled={
+                      formData.tipoInstrumento === "multicanal" &&
+                      numeroCanais >= quantidadeCanais
+                    }
                   >
-                    <Plus className="mr-2" /> Adicionar Ponto
+                    <Plus className="mr-2" />
+                    {formData.tipoInstrumento === "multicanal"
+                      ? `Adicionar Canal (${numeroCanais}/${quantidadeCanais})`
+                      : "Adicionar Ponto"}
                   </button>
                 </div>
               </div>{" "}
@@ -1521,217 +1847,449 @@ const EmitirCertificadoPage = () => {
                     </div>
                   </div>
                 </div>
-              )}
+              )}{" "}
               <div className="space-y-6">
-                {pontosCalibra.map((ponto, pontoIndex) => (
-                  <div
-                    key={ponto.id}
-                    className="border border-gray-300 rounded-md p-3 bg-white relative"
-                  >
-                    <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
-                      {" "}
-                      <div className="flex-1 min-w-[200px]">
-                        {" "}
-                        <label
-                          className="block text-sm font-medium mb-1"
-                          style={{ color: "rgb(75, 85, 99)" }}
-                        >
-                          Volume Nominal
-                        </label>
-                        <div className="flex">
-                          <input
-                            type="text"
-                            value={ponto.volumeNominal}
-                            onChange={(e) =>
-                              handleVolumeNominalChange(
-                                ponto.id,
-                                e.target.value
-                              )
-                            }
-                            placeholder="Volume nominal"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2"
-                            style={{
-                              "--tw-ring-color": "rgb(144, 199, 45)",
-                              color: "rgb(75, 85, 99)",
-                            }}
-                            required
-                          />
-                          <select
-                            value={ponto.unidade}
-                            onChange={(e) =>
-                              atualizarPontoCalibracao(
-                                ponto.id,
-                                "unidade",
-                                e.target.value
-                              )
-                            }
-                            className="px-3 py-2 border border-l-0 border-gray-300 rounded-r-md focus:outline-none focus:ring-2"
-                            style={{
-                              "--tw-ring-color": "rgb(144, 199, 45)",
-                              color: "rgb(75, 85, 99)",
-                            }}
-                          >
-                            <option value="µL">µL</option>
-                            <option value="mL">mL</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="px-3 py-2 rounded-md bg-gray-100 text-center border border-gray-200">
-                          <span className="text-xs text-gray-500">
-                            Ponto #{pontoIndex + 1}
-                          </span>
-                        </div>
+                {formData.tipoInstrumento === "multicanal"
+                  ? // Layout para micropipeta multicanal - agrupado por canal
+                    Array.from({ length: numeroCanais }, (_, canalIndex) => {
+                      const canalNum = canalIndex + 1;
+                      const pontosDoCanalAtual = pontosCalibra.filter(
+                        (p) => p.canal === canalNum
+                      );
 
-                        {pontosCalibra.length > 1 && (
-                          <button
-                            type="button"
-                            className="flex items-center px-2 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-md border border-red-200 transition-colors"
-                            onClick={() =>
-                              confirmarRemoverPonto(ponto.id, pontoIndex + 1)
-                            }
-                            title="Remover ponto de calibração"
-                          >
-                            <Trash2 className="mr-1" />{" "}
-                            <span className="text-xs">Remover</span>
-                          </button>
-                        )}
-                      </div>
-                    </div>{" "}
-                    <div className="mb-4">
-                      <label
-                        className="block text-sm font-medium mb-1"
-                        style={{ color: "rgb(75, 85, 99)" }}
-                      >
-                        Medições (mg)
-                      </label>
-                      <div className="space-y-2">
-                        <textarea
-                          value={ponto.valoresTexto || ""}
-                          onChange={(e) =>
-                            handleValoresChange(ponto.id, e.target.value)
-                          }
-                          placeholder="Cole os valores separados por vírgula. Ex: 99.2, 99.12, 99.17, 99.16, 99.26"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 resize-none"
-                          style={{
-                            "--tw-ring-color": "rgb(144, 199, 45)",
-                            color: "rgb(75, 85, 99)",
-                          }}
-                          rows="3"
-                        />
-                        <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded border border-blue-200">
-                          <strong>💡 Dica:</strong> Copie os valores do Notion e
-                          cole aqui.
-                          <br />
-                        </div>
-
-                        {/* Mostrar os valores processados */}
-                        {ponto.medicoes.some((m) => m !== "") && (
-                          <div className="mt-2">
-                            <div className="text-xs text-gray-500 mb-1">
-                              Valores detectados:
-                            </div>
-                            <div className="grid grid-cols-5 gap-1">
-                              {ponto.medicoes
-                                .slice(0, 10)
-                                .map((medicao, index) => (
-                                  <div
-                                    key={index}
-                                    className={`px-2 py-1 text-xs rounded text-center ${
-                                      medicao !== ""
-                                        ? "bg-green-100 text-green-800 border border-green-200"
-                                        : "bg-gray-100 text-gray-400 border border-gray-200"
-                                    }`}
-                                  >
-                                    {medicao !== "" ? medicao : `M${index + 1}`}
-                                  </div>
-                                ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>{" "}
-                    {/* Resultados dos cálculos */}
-                    {ponto.media !== null && (
-                      <div className="bg-gray-50 p-3 rounded-md">
-                        {" "}
-                        <h4
-                          className="font-medium mb-2 flex items-center py-1.5 px-2 border-l-4"
-                          style={{
-                            color: "rgb(75, 85, 99)",
-                            borderLeftColor: "rgb(144, 199, 45)",
-                          }}
-                        >
-                          <Calculator
-                            className="mr-2"
-                            style={{ color: "rgb(144, 199, 45)" }}
-                          />
-                          Resultados
-                        </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-                          {" "}
-                          <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
-                            <div className="text-xs text-gray-500 mb-1">
-                              Mean Volume
-                            </div>
-                            <div className="flex justify-between">
-                              {" "}
-                              <span className="font-medium">
-                                {ponto.mediaMassa?.toFixed(2)} mg
-                              </span>
-                              <span className="text-green-600 font-medium">
-                                {ponto.media?.toFixed(2)} µL
-                              </span>
-                            </div>
-                            <div className="text-xs text-gray-500 mt-1">
-                              Massa média × Fator Z
-                            </div>
-                          </div>
-                          <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
-                            <div className="text-xs text-gray-500 mb-1">
-                              Accuracy
-                            </div>
-                            <div className="flex justify-between">
-                              {" "}
-                              <span className="font-medium">
-                                {ponto.inexatidao?.toFixed(2)} µL
-                              </span>
-                              <span
-                                className={
-                                  Math.abs(ponto.inexatidaoPercentual) > 5
-                                    ? "text-red-600 font-medium"
-                                    : "text-green-600 font-medium"
-                                }
+                      return (
+                        <div
+                          key={`canal-${canalNum}`}
+                          className="border-2 border-blue-200 rounded-lg p-4 bg-blue-50"
+                        >                          {/* Cabeçalho do canal */}
+                          <div className="flex justify-between items-center mb-4">
+                            <h4 className="font-semibold text-blue-800 flex items-center">
+                              <TestTube className="mr-2" />
+                              Canal {canalNum}
+                              {canalNum === 1 && (
+                                <span className="ml-2 text-xs px-2 py-1 bg-yellow-100 text-yellow-800 rounded-md">
+                                  Canal Mestre
+                                </span>
+                              )}
+                            </h4>
+                            {numeroCanais > 1 && (
+                              <button
+                                type="button"
+                                className="flex items-center px-2 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-md border border-red-200 transition-colors"
+                                onClick={() => {
+                                  const primeiroPontoDoCanal =
+                                    pontosDoCanalAtual[0];
+                                  if (primeiroPontoDoCanal) {
+                                    confirmarRemoverPonto(
+                                      primeiroPontoDoCanal.id,
+                                      canalNum,
+                                      true
+                                    );
+                                  }
+                                }}
+                                title={`Remover canal ${canalNum} completo`}
                               >
-                                {ponto.inexatidaoPercentual?.toFixed(2)}%
-                              </span>
-                            </div>
-                            <div className="text-xs text-gray-500 mt-1">
-                              Mean Volume - Volume Nominal
-                            </div>
-                          </div>{" "}
-                          <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
-                            <div className="text-xs text-gray-500 mb-1">
-                              Precision
-                            </div>
-                            <div className="flex justify-between">
-                              {" "}
-                              <span className="font-medium">
-                                SD: {ponto.desvioPadrao?.toFixed(2)} µL
-                              </span>
-                              <span className="text-blue-600 font-medium">
-                                CV: {ponto.coeficienteVariacao?.toFixed(2)}%
-                              </span>
-                            </div>
-                            <div className="text-xs text-gray-500 mt-1">
-                              Desvio padrão e coeficiente de variação
-                            </div>
+                                <Trash2 className="mr-1" size={14} />
+                                <span className="text-xs">Remover Canal</span>
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Container dos 3 pontos do canal */}
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {pontosDoCanalAtual.map((ponto, pontoIndex) => (
+                              <div
+                                key={ponto.id}
+                                className="border border-gray-300 rounded-md p-3 bg-white relative"
+                              >
+                                <div className="mb-3">
+                                  <div className="flex justify-between items-center mb-2">
+                                    <span className="text-sm font-medium text-gray-600">
+                                      Ponto {ponto.pontoPosicao}
+                                    </span>
+                                    <div className="px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs">
+                                      Canal {canalNum}
+                                    </div>
+                                  </div>
+
+                                  <label
+                                    className="block text-sm font-medium mb-1"
+                                    style={{ color: "rgb(75, 85, 99)" }}
+                                  >
+                                    Volume Nominal
+                                  </label>
+                                  <div className="flex">
+                                    <input
+                                      type="text"
+                                      value={ponto.volumeNominal}
+                                      onChange={(e) =>
+                                        handleVolumeNominalChange(
+                                          ponto.id,
+                                          e.target.value
+                                        )
+                                      }
+                                      placeholder="Volume nominal"
+                                      className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2"
+                                      style={{
+                                        "--tw-ring-color": "rgb(144, 199, 45)",
+                                        color: "rgb(75, 85, 99)",
+                                      }}
+                                      required
+                                    />
+                                    <select
+                                      value={ponto.unidade}
+                                      onChange={(e) =>
+                                        atualizarPontoCalibracao(
+                                          ponto.id,
+                                          "unidade",
+                                          e.target.value
+                                        )
+                                      }
+                                      className="px-3 py-2 border border-l-0 border-gray-300 rounded-r-md focus:outline-none focus:ring-2"
+                                      style={{
+                                        "--tw-ring-color": "rgb(144, 199, 45)",
+                                        color: "rgb(75, 85, 99)",
+                                      }}
+                                    >
+                                      <option value="µL">µL</option>
+                                      <option value="mL">mL</option>
+                                    </select>
+                                  </div>
+                                </div>
+
+                                <div className="mb-3">
+                                  <label
+                                    className="block text-sm font-medium mb-1"
+                                    style={{ color: "rgb(75, 85, 99)" }}
+                                  >
+                                    Medições (mg)
+                                  </label>
+                                  <div className="space-y-2">
+                                    <textarea
+                                      value={ponto.valoresTexto || ""}
+                                      onChange={(e) =>
+                                        handleValoresChange(
+                                          ponto.id,
+                                          e.target.value
+                                        )
+                                      }
+                                      placeholder="Cole os valores separados por vírgula"
+                                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 resize-none"
+                                      style={{
+                                        "--tw-ring-color": "rgb(144, 199, 45)",
+                                        color: "rgb(75, 85, 99)",
+                                      }}
+                                      rows="2"
+                                    />
+
+                                    {/* Mostrar os valores processados */}
+                                    {ponto.medicoes.some((m) => m !== "") && (
+                                      <div className="mt-2">
+                                        <div className="text-xs text-gray-500 mb-1">
+                                          Valores detectados:
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-1">
+                                          {ponto.medicoes
+                                            .slice(0, 6)
+                                            .map((medicao, index) => (
+                                              <div
+                                                key={index}
+                                                className={`px-1 py-1 text-xs rounded text-center ${
+                                                  medicao !== ""
+                                                    ? "bg-green-100 text-green-800 border border-green-200"
+                                                    : "bg-gray-100 text-gray-400 border border-gray-200"
+                                                }`}
+                                              >
+                                                {medicao !== ""
+                                                  ? medicao
+                                                  : `M${index + 1}`}
+                                              </div>
+                                            ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Resultados dos cálculos */}
+                                {ponto.media !== null && (
+                                  <div className="bg-gray-50 p-2 rounded-md">
+                                    <h5 className="font-medium mb-2 text-xs text-gray-700">
+                                      Resultados
+                                    </h5>
+                                    <div className="space-y-2 text-xs">
+                                      <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
+                                        <div className="text-xs text-gray-500 mb-1">
+                                          Mean Volume
+                                        </div>
+                                        <div className="flex justify-between">
+                                          <span className="font-medium">
+                                            {ponto.mediaMassa?.toFixed(2)} mg
+                                          </span>
+                                          <span className="text-green-600 font-medium">
+                                            {ponto.media?.toFixed(2)} µL
+                                          </span>
+                                        </div>
+                                      </div>
+                                      <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
+                                        <div className="text-xs text-gray-500 mb-1">
+                                          Accuracy
+                                        </div>
+                                        <div className="flex justify-between">
+                                          <span className="font-medium">
+                                            {ponto.inexatidao?.toFixed(2)} µL
+                                          </span>
+                                          <span
+                                            className={
+                                              Math.abs(
+                                                ponto.inexatidaoPercentual
+                                              ) > 5
+                                                ? "text-red-600 font-medium"
+                                                : "text-green-600 font-medium"
+                                            }
+                                          >
+                                            {ponto.inexatidaoPercentual?.toFixed(
+                                              2
+                                            )}
+                                            %
+                                          </span>
+                                        </div>
+                                      </div>
+                                      <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
+                                        <div className="text-xs text-gray-500 mb-1">
+                                          Precision
+                                        </div>
+                                        <div className="flex justify-between">
+                                          <span className="font-medium">
+                                            SD: {ponto.desvioPadrao?.toFixed(2)}
+                                          </span>
+                                          <span className="text-blue-600 font-medium">
+                                            CV:{" "}
+                                            {ponto.coeficienteVariacao?.toFixed(
+                                              2
+                                            )}
+                                            %
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
                           </div>
                         </div>
+                      );
+                    })
+                  : // Layout para micropipeta monocanal - layout original
+                    pontosCalibra.map((ponto, pontoIndex) => (
+                      <div
+                        key={ponto.id}
+                        className="border border-gray-300 rounded-md p-3 bg-white relative"
+                      >
+                        <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+                          <div className="flex-1 min-w-[200px]">
+                            <label
+                              className="block text-sm font-medium mb-1"
+                              style={{ color: "rgb(75, 85, 99)" }}
+                            >
+                              Volume Nominal
+                            </label>
+                            <div className="flex">
+                              <input
+                                type="text"
+                                value={ponto.volumeNominal}
+                                onChange={(e) =>
+                                  handleVolumeNominalChange(
+                                    ponto.id,
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Volume nominal"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2"
+                                style={{
+                                  "--tw-ring-color": "rgb(144, 199, 45)",
+                                  color: "rgb(75, 85, 99)",
+                                }}
+                                required
+                              />
+                              <select
+                                value={ponto.unidade}
+                                onChange={(e) =>
+                                  atualizarPontoCalibracao(
+                                    ponto.id,
+                                    "unidade",
+                                    e.target.value
+                                  )
+                                }
+                                className="px-3 py-2 border border-l-0 border-gray-300 rounded-r-md focus:outline-none focus:ring-2"
+                                style={{
+                                  "--tw-ring-color": "rgb(144, 199, 45)",
+                                  color: "rgb(75, 85, 99)",
+                                }}
+                              >
+                                <option value="µL">µL</option>
+                                <option value="mL">mL</option>
+                              </select>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="px-3 py-2 rounded-md bg-gray-100 text-center border border-gray-200">
+                              <span className="text-xs text-gray-500">
+                                Ponto #{pontoIndex + 1}
+                              </span>
+                            </div>
+
+                            {pontosCalibra.length > 1 && (
+                              <button
+                                type="button"
+                                className="flex items-center px-2 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-md border border-red-200 transition-colors"
+                                onClick={() =>
+                                  confirmarRemoverPonto(
+                                    ponto.id,
+                                    pontoIndex + 1
+                                  )
+                                }
+                                title="Remover ponto de calibração"
+                              >
+                                <Trash2 className="mr-1" />
+                                <span className="text-xs">Remover</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="mb-4">
+                          <label
+                            className="block text-sm font-medium mb-1"
+                            style={{ color: "rgb(75, 85, 99)" }}
+                          >
+                            Medições (mg)
+                          </label>
+                          <div className="space-y-2">
+                            <textarea
+                              value={ponto.valoresTexto || ""}
+                              onChange={(e) =>
+                                handleValoresChange(ponto.id, e.target.value)
+                              }
+                              placeholder="Cole os valores separados por vírgula. Ex: 99.2, 99.12, 99.17, 99.16, 99.26"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 resize-none"
+                              style={{
+                                "--tw-ring-color": "rgb(144, 199, 45)",
+                                color: "rgb(75, 85, 99)",
+                              }}
+                              rows="3"
+                            />
+                            <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded border border-blue-200">
+                              <strong>💡 Dica:</strong> Copie os valores do
+                              Notion e cole aqui.
+                            </div>
+
+                            {/* Mostrar os valores processados */}
+                            {ponto.medicoes.some((m) => m !== "") && (
+                              <div className="mt-2">
+                                <div className="text-xs text-gray-500 mb-1">
+                                  Valores detectados:
+                                </div>
+                                <div className="grid grid-cols-5 gap-1">
+                                  {ponto.medicoes
+                                    .slice(0, 10)
+                                    .map((medicao, index) => (
+                                      <div
+                                        key={index}
+                                        className={`px-2 py-1 text-xs rounded text-center ${
+                                          medicao !== ""
+                                            ? "bg-green-100 text-green-800 border border-green-200"
+                                            : "bg-gray-100 text-gray-400 border border-gray-200"
+                                        }`}
+                                      >
+                                        {medicao !== ""
+                                          ? medicao
+                                          : `M${index + 1}`}
+                                      </div>
+                                    ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Resultados dos cálculos */}
+                        {ponto.media !== null && (
+                          <div className="bg-gray-50 p-3 rounded-md">
+                            <h4
+                              className="font-medium mb-2 flex items-center py-1.5 px-2 border-l-4"
+                              style={{
+                                color: "rgb(75, 85, 99)",
+                                borderLeftColor: "rgb(144, 199, 45)",
+                              }}
+                            >
+                              <Calculator
+                                className="mr-2"
+                                style={{ color: "rgb(144, 199, 45)" }}
+                              />
+                              Resultados
+                            </h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                              <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
+                                <div className="text-xs text-gray-500 mb-1">
+                                  Mean Volume
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="font-medium">
+                                    {ponto.mediaMassa?.toFixed(2)} mg
+                                  </span>
+                                  <span className="text-green-600 font-medium">
+                                    {ponto.media?.toFixed(2)} µL
+                                  </span>
+                                </div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                  Massa média × Fator Z
+                                </div>
+                              </div>
+                              <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
+                                <div className="text-xs text-gray-500 mb-1">
+                                  Accuracy
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="font-medium">
+                                    {ponto.inexatidao?.toFixed(2)} µL
+                                  </span>
+                                  <span
+                                    className={
+                                      Math.abs(ponto.inexatidaoPercentual) > 5
+                                        ? "text-red-600 font-medium"
+                                        : "text-green-600 font-medium"
+                                    }
+                                  >
+                                    {ponto.inexatidaoPercentual?.toFixed(2)}%
+                                  </span>
+                                </div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                  Mean Volume - Volume Nominal
+                                </div>
+                              </div>
+                              <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
+                                <div className="text-xs text-gray-500 mb-1">
+                                  Precision
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="font-medium">
+                                    SD: {ponto.desvioPadrao?.toFixed(2)} µL
+                                  </span>
+                                  <span className="text-blue-600 font-medium">
+                                    CV: {ponto.coeficienteVariacao?.toFixed(2)}%
+                                  </span>
+                                </div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                  Desvio padrão e coeficiente de variação
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                ))}{" "}
+                    ))}
               </div>
             </div>{" "}
             <div className="flex justify-end">
