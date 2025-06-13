@@ -45,9 +45,7 @@ export class PDFService {
         const imagemAssinatura = await PDFService.carregarImagemAssinatura();
 
         // Carregar a imagem do rodapé
-        const imagemRodape = await PDFService.carregarImagemRodape();
-
-        // Gerar número do certificado baseado na série
+        const imagemRodape = await PDFService.carregarImagemRodape();        // Gerar número do certificado baseado na série
         const numeroCertificado = `CAL – ${dadosCertificado.numeroCertificado || 'XXXX'}/25`;
 
         const docDefinition = {
@@ -55,7 +53,25 @@ export class PDFService {
             pageMargins: [40, 40, 40, 100], // Aumentada a margem inferior para 100 para acomodar melhor o rodapé
             defaultStyle: {
                 font: 'Roboto'
-            }, footer: null, // Removemos o footer padrão para adicionar o rodapé no conteúdo principal
+            },
+            // Faixa vertical verde no lado esquerdo como elemento decorativo
+            background: function (currentPage, pageSize) {
+                return [
+                    {
+                        canvas: [
+                            {
+                                type: 'rect',
+                                x: 0,
+                                y: 125,
+                                w: 20,
+                                h: 585, // Altura limitada para não sobrepor o rodapé (posicionado em y: 725)
+                                color: '#D8E9A8'
+                            }
+                        ]
+                    }
+                ];
+            },
+            footer: null, // Removemos o footer padrão para adicionar o rodapé no conteúdo principal
 
 
             content: [
