@@ -10,7 +10,6 @@
     "install-all": "npm run install-backend && npm run install-frontend"
   },
   "dependencies": {
-    "lucide-react": "^0.514.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.1.4",
