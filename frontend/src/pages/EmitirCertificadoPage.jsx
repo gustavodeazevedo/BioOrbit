@@ -24,6 +24,7 @@ import ConfirmDialog from "../components/ConfirmDialog";
 import { getClienteById } from "../services/clienteService";
 import { formatNumberInput, formatTemperature } from "../utils/formatUtils";
 import { PDFService } from "../services/pdfService";
+import "../styles/AutomationButton.css";
 
 const EmitirCertificadoPage = () => {
   const { id } = useParams();
@@ -85,7 +86,6 @@ const EmitirCertificadoPage = () => {
 
   // Estado para controlar a visibilidade da nota explicativa sobre cálculos
   const [mostrarNotaCalculos, setMostrarNotaCalculos] = useState(false);
-
   // Estado para controlar o diálogo de confirmação de remoção
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
@@ -93,6 +93,14 @@ const EmitirCertificadoPage = () => {
     message: "",
     pontoId: null,
   });
+  // Estado para controlar a automação de medições
+  const [autoPreenchimento, setAutoPreenchimento] = useState({
+    ativo: false,
+    mensagem: "",
+  });
+
+  // Estado para controlar se a automação está habilitada
+  const [automacaoHabilitada, setAutomacaoHabilitada] = useState(true);
 
   // Estado para exibir/esconder a seção de cálculos
   const [mostrarCalculos, setMostrarCalculos] = useState(false);
@@ -276,21 +284,21 @@ const EmitirCertificadoPage = () => {
       },
     ]);
     setNumeroCanais(1);
-  };  // Função para lidar com mudança na quantidade de canais
+  }; // Função para lidar com mudança na quantidade de canais
   const handleQuantidadeCanaisChange = (novaQuantidade) => {
     setQuantidadeCanais(novaQuantidade);
-    
+
     // Atualizar também o formData
     setFormData({
       ...formData,
       quantidadeCanais: novaQuantidade,
     });
-    
+
     // Se já estiver em modo multicanal, reorganiza os pontos com a nova quantidade
     if (formData.tipoInstrumento === "multicanal") {
       const pontosPorCanal = 3;
       const novosPontos = [];
-      
+
       for (let canal = 1; canal <= novaQuantidade; canal++) {
         for (let ponto = 1; ponto <= pontosPorCanal; ponto++) {
           novosPontos.push({
@@ -309,7 +317,7 @@ const EmitirCertificadoPage = () => {
           });
         }
       }
-      
+
       setPontosCalibra(novosPontos);
       setNumeroCanais(novaQuantidade);
     }
@@ -850,7 +858,26 @@ const EmitirCertificadoPage = () => {
     removerPontoCalibracao(id);
     // Fecha o modal de confirmação
     setConfirmDialog({ ...confirmDialog, isOpen: false });
-  }; // Função para processar valores separados por vírgula em um único input
+  }; // Função para gerar valores próximos ao valor base para outros canais
+  const gerarValoresProximos = (valorBase, variacao = 0.15) => {
+    const numeroValor = parseFloat(valorBase);
+    if (isNaN(numeroValor)) return valorBase;
+
+    // Gera uma variação aleatória entre -variacao e +variacao
+    // Para valores maiores, usa uma variação percentual menor para manter a precisão
+    const variacaoAbsoluta =
+      numeroValor > 100 ? variacao * (numeroValor / 200) : variacao;
+    const variacaoAleatoria = (Math.random() - 0.5) * 2 * variacaoAbsoluta;
+    const novoValor = numeroValor + variacaoAleatoria;
+
+    // Mantém o mesmo número de casas decimais que o valor original
+    const casasDecimais = valorBase.includes(".")
+      ? valorBase.split(".")[1].length
+      : 1;
+    return Math.max(0, novoValor).toFixed(casasDecimais); // Garante que não seja negativo
+  };
+
+  // Função para processar valores separados por vírgula em um único input
   const handleValoresChange = (pontoId, valores) => {
     // Processa a string de valores separados por vírgula
     const valoresArray = valores
@@ -866,6 +893,11 @@ const EmitirCertificadoPage = () => {
       }
     });
 
+    // Verifica se o ponto atual é do Canal 1 e se é multicanal
+    const pontoAtual = pontosCalibra.find((p) => p.id === pontoId);
+    const isCanal1 = pontoAtual && pontoAtual.canal === 1;
+    const isMulticanal = formData.tipoInstrumento === "multicanal";
+
     setPontosCalibra(
       pontosCalibra.map((ponto) => {
         if (ponto.id === pontoId) {
@@ -877,14 +909,64 @@ const EmitirCertificadoPage = () => {
         }
         return ponto;
       })
-    );
-  };  // Função para atualizar o volume nominal de um ponto
+    ); // Automatização: Se for Canal 1 e multicanal, propagar valores similares aos outros canais
+    if (
+      isCanal1 &&
+      isMulticanal &&
+      valoresArray.length > 0 &&
+      automacaoHabilitada
+    ) {
+      // Mostrar notificação de automação
+      setAutoPreenchimento({
+        ativo: true,
+        mensagem: `Preenchendo automaticamente outros canais com valores próximos...`,
+      });
+
+      setTimeout(() => {
+        setPontosCalibra((prevPontos) => {
+          return prevPontos.map((ponto) => {
+            // Se não for Canal 1 e tiver a mesma posição do ponto que está sendo alterado
+            if (
+              ponto.canal !== 1 &&
+              ponto.pontoPosicao === pontoAtual.pontoPosicao
+            ) {
+              // Gera valores próximos aos do Canal 1
+              const novosMedicoes = Array(10).fill("");
+              const novosValoresTexto = [];
+
+              valoresArray.forEach((valor, index) => {
+                if (index < 10) {
+                  const valorProximo = gerarValoresProximos(valor);
+                  novosMedicoes[index] = valorProximo;
+                  if (valorProximo !== "") {
+                    novosValoresTexto.push(valorProximo);
+                  }
+                }
+              });
+
+              return {
+                ...ponto,
+                medicoes: novosMedicoes,
+                valoresTexto: novosValoresTexto.join(", "),
+              };
+            }
+            return ponto;
+          });
+        });
+
+        // Esconder notificação após 2 segundos
+        setTimeout(() => {
+          setAutoPreenchimento({ ativo: false, mensagem: "" });
+        }, 2000);
+      }, 100); // Pequeno delay para garantir que o estado seja atualizado
+    }
+  }; // Função para atualizar o volume nominal de um ponto
   const handleVolumeNominalChange = (pontoId, valor) => {
     // Usa a função de formatação de números da pasta utils
     const valorFormatado = formatNumberInput(valor);
 
     // Encontrar o ponto que está sendo modificado
-    const pontoAtual = pontosCalibra.find(p => p.id === pontoId);
+    const pontoAtual = pontosCalibra.find((p) => p.id === pontoId);
     const isCanal1 = pontoAtual && pontoAtual.canal === 1;
     const isMulticanal = formData.tipoInstrumento === "multicanal";
 
@@ -946,7 +1028,7 @@ const EmitirCertificadoPage = () => {
             coeficienteVariacao =
               media !== null && media !== 0 ? (desvioPadrao / media) * 100 : 0;
           }
-          
+
           return {
             ...ponto,
             volumeNominal: valorFormatado,
@@ -969,54 +1051,83 @@ const EmitirCertificadoPage = () => {
                 : null,
           };
         }
-        
+
         // Se for multicanal e estamos alterando o canal 1, sincronizar com outros canais
-        else if (isMulticanal && isCanal1 && ponto.canal !== 1 && ponto.pontoPosicao === pontoAtual.pontoPosicao) {
+        else if (
+          isMulticanal &&
+          isCanal1 &&
+          ponto.canal !== 1 &&
+          ponto.pontoPosicao === pontoAtual.pontoPosicao
+        ) {
           return {
             ...ponto,
             volumeNominal: valorFormatado,
             // Recalcular este ponto também se tiver medições
-            ...(ponto.medicoes.some(m => m !== "") ? (() => {
-              const medicoesValidas = ponto.medicoes
-                .map((m) => parseFloat(m))
-                .filter((m) => !isNaN(m));
+            ...(ponto.medicoes.some((m) => m !== "")
+              ? (() => {
+                  const medicoesValidas = ponto.medicoes
+                    .map((m) => parseFloat(m))
+                    .filter((m) => !isNaN(m));
 
-              if (medicoesValidas.length === 0) return {};
+                  if (medicoesValidas.length === 0) return {};
 
-              const mediaMassa = medicoesValidas.reduce((sum, val) => sum + val, 0) / medicoesValidas.length;
-              const volumesIndividuais = medicoesValidas.map((massa) => massa * fatorZ);
-              const media = volumesIndividuais.reduce((sum, vol) => sum + vol, 0) / volumesIndividuais.length;
-              
-              let inexatidao = null;
-              let inexatidaoPercentual = null;
-              if (valorFormatado !== "") {
-                const volumeNominal = parseFloat(valorFormatado);
-                inexatidao = media - volumeNominal;
-                inexatidaoPercentual = (inexatidao / volumeNominal) * 100;
-              }
+                  const mediaMassa =
+                    medicoesValidas.reduce((sum, val) => sum + val, 0) /
+                    medicoesValidas.length;
+                  const volumesIndividuais = medicoesValidas.map(
+                    (massa) => massa * fatorZ
+                  );
+                  const media =
+                    volumesIndividuais.reduce((sum, vol) => sum + vol, 0) /
+                    volumesIndividuais.length;
 
-              let desvioPadrao = null;
-              let coeficienteVariacao = null;
-              if (volumesIndividuais.length > 1) {
-                const somaDosQuadrados = volumesIndividuais.reduce(
-                  (sum, vol) => sum + Math.pow(vol - media, 2), 0
-                );
-                desvioPadrao = Math.sqrt(somaDosQuadrados / (volumesIndividuais.length - 1));
-                coeficienteVariacao = media !== 0 ? (desvioPadrao / media) * 100 : 0;
-              }
+                  let inexatidao = null;
+                  let inexatidaoPercentual = null;
+                  if (valorFormatado !== "") {
+                    const volumeNominal = parseFloat(valorFormatado);
+                    inexatidao = media - volumeNominal;
+                    inexatidaoPercentual = (inexatidao / volumeNominal) * 100;
+                  }
 
-              return {
-                media: parseFloat(media.toFixed(2)),
-                mediaMassa: parseFloat(mediaMassa.toFixed(2)),
-                inexatidao: inexatidao !== null ? parseFloat(inexatidao.toFixed(2)) : null,
-                inexatidaoPercentual: inexatidaoPercentual !== null ? parseFloat(inexatidaoPercentual.toFixed(2)) : null,
-                desvioPadrao: desvioPadrao !== null ? parseFloat(desvioPadrao.toFixed(2)) : null,
-                coeficienteVariacao: coeficienteVariacao !== null ? parseFloat(coeficienteVariacao.toFixed(2)) : null,
-              };
-            })() : {})
+                  let desvioPadrao = null;
+                  let coeficienteVariacao = null;
+                  if (volumesIndividuais.length > 1) {
+                    const somaDosQuadrados = volumesIndividuais.reduce(
+                      (sum, vol) => sum + Math.pow(vol - media, 2),
+                      0
+                    );
+                    desvioPadrao = Math.sqrt(
+                      somaDosQuadrados / (volumesIndividuais.length - 1)
+                    );
+                    coeficienteVariacao =
+                      media !== 0 ? (desvioPadrao / media) * 100 : 0;
+                  }
+
+                  return {
+                    media: parseFloat(media.toFixed(2)),
+                    mediaMassa: parseFloat(mediaMassa.toFixed(2)),
+                    inexatidao:
+                      inexatidao !== null
+                        ? parseFloat(inexatidao.toFixed(2))
+                        : null,
+                    inexatidaoPercentual:
+                      inexatidaoPercentual !== null
+                        ? parseFloat(inexatidaoPercentual.toFixed(2))
+                        : null,
+                    desvioPadrao:
+                      desvioPadrao !== null
+                        ? parseFloat(desvioPadrao.toFixed(2))
+                        : null,
+                    coeficienteVariacao:
+                      coeficienteVariacao !== null
+                        ? parseFloat(coeficienteVariacao.toFixed(2))
+                        : null,
+                  };
+                })()
+              : {}),
           };
         }
-        
+
         return ponto;
       })
     );
@@ -1157,8 +1268,15 @@ const EmitirCertificadoPage = () => {
               <span className="font-medium">Endereço:</span>{" "}
               {renderEnderecoCompleto()}
             </div>
+          </div>{" "}
+        </div>{" "}
+        {/* Notificação de automação */}
+        {autoPreenchimento.ativo && (
+          <div className="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded-md mb-6 flex items-center animate-pulse">
+            <Calculator className="mr-2" />
+            {autoPreenchimento.mensagem}
           </div>
-        </div>
+        )}{" "}
         {certificadoGerado ? (
           <div className="text-center">
             <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-md mb-6">
@@ -1636,7 +1754,8 @@ const EmitirCertificadoPage = () => {
                             style={{ color: "rgb(75, 85, 99)" }}
                           >
                             12 Canais
-                          </span>                        </label>
+                          </span>{" "}
+                        </label>
                       </div>
                     </div>
                   )}
@@ -1726,64 +1845,49 @@ const EmitirCertificadoPage = () => {
                       </>
                     )}
                   </button>{" "}
-                  <button
-                    type="button"
-                    className={`flex items-center text-sm px-3 py-1.5 rounded-md border transition-colors ${
-                      formData.tipoInstrumento === "multicanal" &&
-                      numeroCanais >= quantidadeCanais
-                        ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-                        : "border-green-300"
-                    }`}
-                    style={{
-                      backgroundColor:
-                        formData.tipoInstrumento === "multicanal" &&
-                        numeroCanais >= quantidadeCanais
-                          ? "rgb(243, 244, 246)"
-                          : "rgb(240, 253, 244)",
-                      color:
-                        formData.tipoInstrumento === "multicanal" &&
-                        numeroCanais >= quantidadeCanais
-                          ? "rgb(156, 163, 175)"
-                          : "rgb(144, 199, 45)",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (
-                        !(
-                          formData.tipoInstrumento === "multicanal" &&
-                          numeroCanais >= quantidadeCanais
-                        )
-                      ) {
-                        e.target.style.backgroundColor = "rgb(220, 252, 231)";
+                  {/* Controle de automação para multicanal ou botão adicionar para monocanal */}
+                  {formData.tipoInstrumento === "multicanal" ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAutomacaoHabilitada(!automacaoHabilitada)
                       }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (
-                        !(
-                          formData.tipoInstrumento === "multicanal" &&
-                          numeroCanais >= quantidadeCanais
-                        )
-                      ) {
+                      className={`relative flex items-center text-sm px-3 py-1.5 rounded-md border transition-all duration-300 ${
+                        automacaoHabilitada
+                          ? "bg-green-100 text-green-800 border-green-300 hover:bg-green-200 smart-automation-btn"
+                          : "bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200 automation-btn-inactive"
+                      }`}
+                      title={
+                        automacaoHabilitada
+                          ? "Desativar automação de valores próximos"
+                          : "Ativar automação de valores próximos"
+                      }
+                    >
+                      <span className="relative z-10">
+                        Automação: {automacaoHabilitada ? "Ativa" : "Inativa"}
+                      </span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="flex items-center text-sm px-3 py-1.5 rounded-md border border-green-300"
+                      style={{
+                        backgroundColor: "rgb(240, 253, 244)",
+                        color: "rgb(144, 199, 45)",
+                      }}
+                      onMouseEnter={(e) => {
                         e.target.style.backgroundColor = "rgb(240, 253, 244)";
-                      }
-                    }}
-                    onClick={adicionarPontoCalibracao}
-                    title={
-                      formData.tipoInstrumento === "multicanal"
-                        ? numeroCanais >= quantidadeCanais
-                          ? `Limite máximo de ${quantidadeCanais} canais atingido`
-                          : `Adicionar novo canal de calibração (${numeroCanais}/${quantidadeCanais})`
-                        : "Adicionar novo ponto de calibração"
-                    }
-                    disabled={
-                      formData.tipoInstrumento === "multicanal" &&
-                      numeroCanais >= quantidadeCanais
-                    }
-                  >
-                    <Plus className="mr-2" />
-                    {formData.tipoInstrumento === "multicanal"
-                      ? `Adicionar Canal (${numeroCanais}/${quantidadeCanais})`
-                      : "Adicionar Ponto"}
-                  </button>
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.backgroundColor = "rgb(240, 253, 244)";
+                      }}
+                      onClick={adicionarPontoCalibracao}
+                      title="Adicionar novo ponto de calibração"
+                    >
+                      <Plus className="mr-2" />
+                      Adicionar Ponto
+                    </button>
+                  )}
                 </div>
               </div>{" "}
               {mostrarNotaCalculos && (
@@ -1861,7 +1965,9 @@ const EmitirCertificadoPage = () => {
                         <div
                           key={`canal-${canalNum}`}
                           className="border-2 border-blue-200 rounded-lg p-4 bg-blue-50"
-                        >                          {/* Cabeçalho do canal */}
+                        >
+                          {" "}
+                          {/* Cabeçalho do canal */}
                           <div className="flex justify-between items-center mb-4">
                             <h4 className="font-semibold text-blue-800 flex items-center">
                               <TestTube className="mr-2" />
@@ -1894,7 +2000,6 @@ const EmitirCertificadoPage = () => {
                               </button>
                             )}
                           </div>
-
                           {/* Container dos 3 pontos do canal */}
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             {pontosDoCanalAtual.map((ponto, pontoIndex) => (
