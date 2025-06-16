@@ -20,7 +20,6 @@ import {
   Trash2,
 } from "lucide-react";
 import Tooltip from "../components/Tooltip";
-import ConfirmDialog from "../components/ConfirmDialog";
 import { getClienteById } from "../services/clienteService";
 import { formatNumberInput, formatTemperature } from "../utils/formatUtils";
 import { PDFService } from "../services/pdfService";
@@ -40,6 +39,7 @@ const EmitirCertificadoPage = () => {
   const [formData, setFormData] = useState({
     numeroCertificado: "",
     dataCalibracao: "",
+    tipoEquipamento: "micropipeta", // Tipo de equipamento (micropipeta/repipetador)
     marcaPipeta: "",
     modeloPipeta: "",
     numeroPipeta: "",
@@ -80,19 +80,13 @@ const EmitirCertificadoPage = () => {
     },
   ]);
   // Estado para controlar o número de canais (para multicanal)
-  const [numeroCanais, setNumeroCanais] = useState(1);
-  // Estado para controlar a quantidade de canais selecionada pelo usuário
+  const [numeroCanais, setNumeroCanais] = useState(1); // Estado para controlar a quantidade de canais selecionada pelo usuário
   const [quantidadeCanais, setQuantidadeCanais] = useState(8); // 8 ou 12 canais
 
+  // Estado para gerenciar seringas do repipetador
+  const [seringas, setSeringas] = useState([]);
   // Estado para controlar a visibilidade da nota explicativa sobre cálculos
   const [mostrarNotaCalculos, setMostrarNotaCalculos] = useState(false);
-  // Estado para controlar o diálogo de confirmação de remoção
-  const [confirmDialog, setConfirmDialog] = useState({
-    isOpen: false,
-    title: "",
-    message: "",
-    pontoId: null,
-  });
   // Estado para controlar a automação de medições
   const [autoPreenchimento, setAutoPreenchimento] = useState({
     ativo: false,
@@ -202,6 +196,25 @@ const EmitirCertificadoPage = () => {
         ...formData,
         [name]: valorFormatado,
       });
+    } else if (name === "tipoEquipamento") {
+      // Quando o tipo de equipamento muda, ajusta configurações específicas
+      const novoFormData = {
+        ...formData,
+        [name]: value,
+      };
+
+      // Se mudou para repipetador, limpa campos específicos de micropipetas e força tipo de instrumento como monocanal
+      if (value === "repipetador") {
+        novoFormData.tipoInstrumento = "monocanal";
+        novoFormData.quantidadeCanais = 1;
+        novoFormData.capacidade = "";
+        novoFormData.faixaIndicacao = "";
+        novoFormData.faixaCalibrada = "";
+        // Reorganiza pontos para monocanal se necessário
+        reorganizarPontosParaMonocanal();
+      }
+
+      setFormData(novoFormData);
     } else if (name === "tipoInstrumento") {
       // Quando o tipo de instrumento muda, reorganiza os pontos de calibração
       if (value === "multicanal") {
@@ -317,11 +330,136 @@ const EmitirCertificadoPage = () => {
           });
         }
       }
-
       setPontosCalibra(novosPontos);
       setNumeroCanais(novaQuantidade);
     }
   };
+
+  // Funções para gerenciar seringas do repipetador
+  const adicionarSeringa = () => {
+    const novaSeringa = {
+      id: Date.now(),
+      volumeNominal: "",
+      unidade: "µL",
+      pontosCalibra: Array.from({ length: 3 }, (_, index) => ({
+        id: Date.now() + index + 1,
+        volumeNominal: "",
+        unidade: "µL",
+        medicoes: Array(10).fill(""),
+        valoresTexto: "",
+        media: null,
+        mediaMassa: null,
+        inexatidao: null,
+        inexatidaoPercentual: null,
+        desvioPadrao: null,
+        pontoIndex: index + 1,
+      })),
+    };
+    setSeringas([...seringas, novaSeringa]);
+  };
+
+  const removerSeringa = (seringaId) => {
+    if (seringas.length <= 1) {
+      alert("É necessário manter pelo menos uma seringa para calibração.");
+      return;
+    }
+    setSeringas(seringas.filter((seringa) => seringa.id !== seringaId));
+  };
+  const atualizarSeringa = (seringaId, campo, valor) => {
+    setSeringas(
+      seringas.map((seringa) => {
+        if (seringa.id === seringaId) {
+          return { ...seringa, [campo]: valor };
+        }
+        return seringa;
+      })
+    );
+  };
+
+  const atualizarPontoSeringa = (seringaId, pontoId, campo, valor) => {
+    setSeringas(
+      seringas.map((seringa) => {
+        if (seringa.id === seringaId) {
+          return {
+            ...seringa,
+            pontosCalibra: seringa.pontosCalibra.map((ponto) => {
+              if (ponto.id === pontoId) {
+                return { ...ponto, [campo]: valor };
+              }
+              return ponto;
+            }),
+          };
+        }
+        return seringa;
+      })
+    );
+  };
+
+  const atualizarMedicaoSeringa = (seringaId, pontoId, medicaoIndex, valor) => {
+    setSeringas(
+      seringas.map((seringa) => {
+        if (seringa.id === seringaId) {
+          return {
+            ...seringa,
+            pontosCalibra: seringa.pontosCalibra.map((ponto) => {
+              if (ponto.id === pontoId) {
+                const novasMedicoes = [...ponto.medicoes];
+                const valorFormatado = formatNumberInput(valor);
+                novasMedicoes[medicaoIndex] = valorFormatado;
+                return { ...ponto, medicoes: novasMedicoes };
+              }
+              return ponto;
+            }),
+          };
+        }
+        return seringa;
+      })
+    );
+  };
+
+  const handleValoresChangeSeringa = (seringaId, pontoId, valores) => {
+    // Processa os valores colados (separados por vírgula)
+    const valoresLimpos = valores
+      .split(/[,\s]+/)
+      .map((v) => v.trim())
+      .filter((v) => v !== "" && !isNaN(parseFloat(v)));
+
+    const medicoesFinal = Array(10).fill("");
+    valoresLimpos.forEach((valor, index) => {
+      if (index < 10) {
+        medicoesFinal[index] = valor;
+      }
+    });
+
+    setSeringas(
+      seringas.map((seringa) => {
+        if (seringa.id === seringaId) {
+          return {
+            ...seringa,
+            pontosCalibra: seringa.pontosCalibra.map((ponto) => {
+              if (ponto.id === pontoId) {
+                return {
+                  ...ponto,
+                  valoresTexto: valores,
+                  medicoes: medicoesFinal,
+                };
+              }
+              return ponto;
+            }),
+          };
+        }
+        return seringa;
+      })
+    );
+  };
+
+  // Inicializar com uma seringa quando o tipo muda para repipetador
+  useEffect(() => {
+    if (formData.tipoEquipamento === "repipetador" && seringas.length === 0) {
+      adicionarSeringa();
+    }
+  }, [formData.tipoEquipamento]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -361,12 +499,19 @@ const EmitirCertificadoPage = () => {
   }; // Função para fazer o download do certificado em PDF
   const handleDownloadCertificado = async () => {
     try {
+      // Preparar dados específicos para repipetadores
+      const dadosParaPDF =
+        formData.tipoEquipamento === "repipetador" ? seringas : pontosCalibra;
+      const seringasParaPDF =
+        formData.tipoEquipamento === "repipetador" ? seringas : null;
+
       // Gerar o PDF usando o serviço
       const pdf = await PDFService.gerarCertificadoCalibracao(
         formData,
         cliente,
-        pontosCalibra,
-        fatorZ
+        dadosParaPDF,
+        fatorZ,
+        seringasParaPDF
       );
 
       // Criar nome do arquivo
@@ -381,16 +526,22 @@ const EmitirCertificadoPage = () => {
       );
     }
   };
-
   // Função para visualizar o PDF antes de baixar
   const handleVisualizarCertificado = async () => {
     try {
+      // Preparar dados específicos para repipetadores
+      const dadosParaPDF =
+        formData.tipoEquipamento === "repipetador" ? seringas : pontosCalibra;
+      const seringasParaPDF =
+        formData.tipoEquipamento === "repipetador" ? seringas : null;
+
       // Gerar o PDF usando o serviço
       const pdf = await PDFService.gerarCertificadoCalibracao(
         formData,
         cliente,
-        pontosCalibra,
-        fatorZ
+        dadosParaPDF,
+        fatorZ,
+        seringasParaPDF
       );
 
       // Abrir o PDF em uma nova aba para visualização
@@ -790,11 +941,83 @@ const EmitirCertificadoPage = () => {
       (acc, val) => acc + Math.pow(val - media, 2),
       0
     );
-
     return Math.sqrt(
       somaDosQuadradosDasDiferencas / (valoresNumericos.length - 1)
     );
-  }; // Função para adicionar novo ponto de calibração
+  };
+
+  // Função para calcular resultados das seringas do repipetador
+  const calcularResultadosSeringas = () => {
+    if (formData.tipoEquipamento !== "repipetador") return;
+
+    setSeringas((seringasAnterior) =>
+      seringasAnterior.map((seringa) => ({
+        ...seringa,
+        pontosCalibra: seringa.pontosCalibra.map((ponto) => {
+          // Verificar se há medições válidas
+          const medicoesValidas = ponto.medicoes.filter(
+            (med) => med !== "" && !isNaN(parseFloat(med))
+          );
+
+          if (medicoesValidas.length === 0) {
+            return {
+              ...ponto,
+              media: null,
+              mediaMassa: null,
+              inexatidao: null,
+              inexatidaoPercentual: null,
+              desvioPadrao: null,
+              coeficienteVariacao: null,
+            };
+          }
+
+          // Calcular média das massas
+          const mediaMassa = calcularMedia(ponto.medicoes);
+
+          // Calcular média dos volumes (massa × fator Z)
+          const mediaVolume = calcularMedia(ponto.medicoes, fatorZ);
+
+          // Calcular inexatidão (accuracy)
+          const volumeNominal = parseFloat(ponto.volumeNominal) || 0;
+          const inexatidao = mediaVolume - volumeNominal;
+          const inexatidaoPercentual = (inexatidao / volumeNominal) * 100;
+
+          // Calcular desvio padrão (precision)
+          const desvioPadrao = calcularDesvioPadrao(
+            ponto.medicoes,
+            mediaVolume,
+            fatorZ
+          );
+
+          // Calcular coeficiente de variação
+          const coeficienteVariacao =
+            mediaVolume > 0 ? (desvioPadrao / mediaVolume) * 100 : 0;
+
+          return {
+            ...ponto,
+            media: mediaVolume,
+            mediaMassa: mediaMassa,
+            inexatidao: inexatidao,
+            inexatidaoPercentual: inexatidaoPercentual,
+            desvioPadrao: desvioPadrao,
+            coeficienteVariacao: coeficienteVariacao,
+          };
+        }),
+      }))
+    );
+  };
+
+  // Recalcular automaticamente quando as medições das seringas ou o fator Z mudam
+  useEffect(() => {
+    calcularResultadosSeringas();
+  }, [
+    seringas
+      .map((s) => s.pontosCalibra.map((p) => p.medicoes.join()).join())
+      .join(),
+    fatorZ,
+  ]);
+
+  // Função para adicionar novo ponto de calibração
   const adicionarPonto = () => {
     setPontosCalibra([
       ...pontosCalibra,
@@ -810,55 +1033,38 @@ const EmitirCertificadoPage = () => {
         inexatidaoPercentual: null,
         desvioPadrao: null,
       },
-    ]);
-  }; // Função para mostrar diálogo de confirmação de remoção
-  const confirmarRemoverPonto = (id, numeroPonto, isCanal = false) => {
+    ]);  }; 
+
+  // Função para remover ponto diretamente (sem confirmação)
+  const removerPontoDiretamente = (id, numeroPonto, isCanal = false) => {
     if (formData.tipoInstrumento === "multicanal" && isCanal) {
       if (numeroCanais <= 1) {
-        setConfirmDialog({
-          isOpen: true,
-          title: "Não é possível remover",
-          message: "É necessário ter pelo menos um canal de calibração.",
-          pontoId: null,
-          type: "info",
-        });
-        return;
+        return; // Não remove se é o último canal
       }
-
-      setConfirmDialog({
-        isOpen: true,
-        title: "Remover canal de calibração",
-        message: `Tem certeza que deseja remover o canal ${numeroPonto} completo? Todos os 3 pontos de calibração deste canal serão removidos.`,
-        pontoId: id,
-        type: "warning",
+      // Remove todos os pontos do canal
+      const pontosDoCanal = pontosCalibra.filter(
+        (p) => p.canal === numeroPonto
+      );
+      pontosDoCanal.forEach((ponto) => {
+        removerPontoCalibracao(ponto.id);
       });
     } else {
       if (pontosCalibra.length <= 1) {
-        setConfirmDialog({
-          isOpen: true,
-          title: "Não é possível remover",
-          message: "É necessário ter pelo menos um ponto de calibração.",
-          pontoId: null,
-          type: "info",
-        });
-        return;
+        return; // Não remove se é o último ponto
       }
-
-      setConfirmDialog({
-        isOpen: true,
-        title: "Remover ponto de calibração",
-        message: `Tem certeza que deseja remover o ponto de calibração #${numeroPonto}?`,
-        pontoId: id,
-        type: "warning",
-      });
+      removerPontoCalibracao(id);
     }
   };
-  // Função para remover um ponto de calibração
-  const removerPonto = (id) => {
-    removerPontoCalibracao(id);
-    // Fecha o modal de confirmação
-    setConfirmDialog({ ...confirmDialog, isOpen: false });
-  }; // Função para gerar valores próximos ao valor base para outros canais
+
+  // Função para remover seringa diretamente (sem confirmação)
+  const removerSeringaDiretamente = (seringaId, numeroSeringa) => {
+    if (seringas.length <= 1) {
+      return; // Não remove se é a última seringa
+    }
+    removerSeringa(seringaId);
+  };
+
+  // Função para gerar valores próximos ao valor base para outros canais
   const gerarValoresProximos = (valorBase, variacao = 0.15) => {
     const numeroValor = parseFloat(valorBase);
     if (isNaN(numeroValor)) return valorBase;
@@ -1290,7 +1496,10 @@ const EmitirCertificadoPage = () => {
               <p className="mb-2">Número: {formData.numeroCertificado}</p>
               <p className="mb-2">Cliente: {cliente?.nome}</p>{" "}
               <p className="mb-2">
-                Micropipeta: {formData.marcaPipeta} {formData.modeloPipeta}
+                {formData.tipoEquipamento === "micropipeta"
+                  ? "Micropipeta"
+                  : "Repipetador"}
+                : {formData.marcaPipeta} {formData.modeloPipeta}
               </p>{" "}
               <p className="mb-2">Número de Série: {formData.numeroPipeta}</p>
               {formData.numeroIdentificacao && (
@@ -1298,12 +1507,14 @@ const EmitirCertificadoPage = () => {
                   Nº de Identificação: {formData.numeroIdentificacao}
                 </p>
               )}
-              <p className="mb-2">
-                Tipo de Instrumento:{" "}
-                {formData.tipoInstrumento === "monocanal"
-                  ? "Monocanal"
-                  : "Multicanal"}
-              </p>
+              {formData.tipoEquipamento === "micropipeta" && (
+                <p className="mb-2">
+                  Tipo de Instrumento:{" "}
+                  {formData.tipoInstrumento === "monocanal"
+                    ? "Monocanal"
+                    : "Multicanal"}
+                </p>
+              )}
               <p className="mb-2">Temperatura: {formData.temperatura} °C</p>
               <p className="mb-2">
                 Umidade Relativa: {formData.umidadeRelativa}%
@@ -1537,8 +1748,50 @@ const EmitirCertificadoPage = () => {
                   borderLeftColor: "rgb(144, 199, 45)",
                 }}
               >
-                Dados da Micropipeta
+                Dados{" "}
+                {formData.tipoEquipamento === "micropipeta"
+                  ? "da Micropipeta"
+                  : "do Repipetador"}
               </h3>
+              {/* Seletor de tipo de equipamento */}
+              <div className="mb-4 p-3 bg-blue-50 rounded-md border border-blue-200">
+                <label
+                  className="block text-sm font-medium mb-2"
+                  style={{ color: "rgb(75, 85, 99)" }}
+                >
+                  Tipo de Equipamento
+                </label>
+                <div className="flex space-x-4">
+                  <label className="inline-flex items-center">
+                    <input
+                      type="radio"
+                      name="tipoEquipamento"
+                      value="micropipeta"
+                      checked={formData.tipoEquipamento === "micropipeta"}
+                      onChange={handleChange}
+                      className="form-radio h-5 w-5"
+                      style={{ color: "rgb(144, 199, 45)" }}
+                    />
+                    <span className="ml-2" style={{ color: "rgb(75, 85, 99)" }}>
+                      Micropipeta
+                    </span>
+                  </label>
+                  <label className="inline-flex items-center">
+                    <input
+                      type="radio"
+                      name="tipoEquipamento"
+                      value="repipetador"
+                      checked={formData.tipoEquipamento === "repipetador"}
+                      onChange={handleChange}
+                      className="form-radio h-5 w-5"
+                      style={{ color: "rgb(144, 199, 45)" }}
+                    />{" "}
+                    <span className="ml-2" style={{ color: "rgb(75, 85, 99)" }}>
+                      Repipetador
+                    </span>
+                  </label>
+                </div>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {" "}
                 <div>
@@ -1546,7 +1799,10 @@ const EmitirCertificadoPage = () => {
                     className="block text-sm font-medium mb-1"
                     style={{ color: "rgb(75, 85, 99)" }}
                   >
-                    Marca da Pipeta
+                    Marca{" "}
+                    {formData.tipoEquipamento === "micropipeta"
+                      ? "da Pipeta"
+                      : "do Repipetador"}
                   </label>
                   <input
                     type="text"
@@ -1558,8 +1814,11 @@ const EmitirCertificadoPage = () => {
                       "--tw-ring-color": "rgb(144, 199, 45)",
                       color: "rgb(75, 85, 99)",
                     }}
-                    required
-                    placeholder="Ex: Eppendorf, Gilson, HTL, etc."
+                    placeholder={
+                      formData.tipoEquipamento === "micropipeta"
+                        ? "Ex: Eppendorf, Gilson, HTL, etc."
+                        : "Ex: Eppendorf, Brand, Rainin, etc."
+                    }
                   />
                 </div>
                 <div>
@@ -1567,7 +1826,10 @@ const EmitirCertificadoPage = () => {
                     className="block text-sm font-medium mb-1"
                     style={{ color: "rgb(75, 85, 99)" }}
                   >
-                    Modelo da Pipeta
+                    Modelo{" "}
+                    {formData.tipoEquipamento === "micropipeta"
+                      ? "da Pipeta"
+                      : "do Repipetador"}
                   </label>
                   <input
                     type="text"
@@ -1579,8 +1841,11 @@ const EmitirCertificadoPage = () => {
                       "--tw-ring-color": "rgb(144, 199, 45)",
                       color: "rgb(75, 85, 99)",
                     }}
-                    required
-                    placeholder="Ex: P1000, Research Plus, etc."
+                    placeholder={
+                      formData.tipoEquipamento === "micropipeta"
+                        ? "Ex: P1000, Research Plus, etc."
+                        : "Ex: Multipette E3x, Repeater M4, etc."
+                    }
                   />
                 </div>{" "}
                 <div>
@@ -1588,7 +1853,10 @@ const EmitirCertificadoPage = () => {
                     className="block text-sm font-medium mb-1"
                     style={{ color: "rgb(75, 85, 99)" }}
                   >
-                    Número/Série da Pipeta
+                    Número/Série{" "}
+                    {formData.tipoEquipamento === "micropipeta"
+                      ? "da Pipeta"
+                      : "do Repipetador"}
                   </label>
                   <input
                     type="text"
@@ -1600,7 +1868,6 @@ const EmitirCertificadoPage = () => {
                       "--tw-ring-color": "rgb(144, 199, 45)",
                       color: "rgb(75, 85, 99)",
                     }}
-                    required
                     placeholder="Ex: AJ12345"
                   />{" "}
                 </div>
@@ -1622,184 +1889,195 @@ const EmitirCertificadoPage = () => {
                       color: "rgb(75, 85, 99)",
                     }}
                     placeholder="Ex: ID001, BIO123, etc. (opcional)"
-                  />
+                  />{" "}
                 </div>
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-1"
-                    style={{ color: "rgb(75, 85, 99)" }}
-                  >
-                    Capacidade
-                  </label>
-                  <div className="flex">
-                    <input
-                      type="text"
-                      name="capacidade"
-                      value={formData.capacidade}
-                      onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2"
-                      style={{
-                        "--tw-ring-color": "rgb(144, 199, 45)",
-                        color: "rgb(75, 85, 99)",
-                      }}
-                      required
-                      placeholder="Ex: 1000"
-                    />
-                    <select
-                      name="unidadeCapacidade"
-                      value={formData.unidadeCapacidade}
-                      onChange={handleChange}
-                      className="px-3 py-2 border border-l-0 border-gray-300 rounded-r-md focus:outline-none focus:ring-2"
-                      style={{
-                        "--tw-ring-color": "rgb(144, 199, 45)",
-                        color: "rgb(75, 85, 99)",
-                      }}
+                {/* Campo Capacidade - apenas para micropipetas */}
+                {formData.tipoEquipamento === "micropipeta" && (
+                  <div>
+                    <label
+                      className="block text-sm font-medium mb-1"
+                      style={{ color: "rgb(75, 85, 99)" }}
                     >
-                      <option value="µL">µL</option>
-                      <option value="mL">mL</option>
-                    </select>
-                  </div>
-                </div>{" "}
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-1"
-                    style={{ color: "rgb(75, 85, 99)" }}
-                  >
-                    Tipo de Instrumento
-                  </label>
-                  <div className="flex space-x-4">
-                    <label className="inline-flex items-center">
-                      <input
-                        type="radio"
-                        name="tipoInstrumento"
-                        value="monocanal"
-                        checked={formData.tipoInstrumento === "monocanal"}
-                        onChange={handleChange}
-                        className="form-radio h-5 w-5"
-                        style={{ color: "rgb(144, 199, 45)" }}
-                      />
-                      <span
-                        className="ml-2"
-                        style={{ color: "rgb(75, 85, 99)" }}
-                      >
-                        Monocanal
-                      </span>
+                      Capacidade
                     </label>
-                    <label className="inline-flex items-center">
+                    <div className="flex">
                       <input
-                        type="radio"
-                        name="tipoInstrumento"
-                        value="multicanal"
-                        checked={formData.tipoInstrumento === "multicanal"}
+                        type="text"
+                        name="capacidade"
+                        value={formData.capacidade}
                         onChange={handleChange}
-                        className="form-radio h-5 w-5"
-                        style={{ color: "rgb(144, 199, 45)" }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2"
+                        style={{
+                          "--tw-ring-color": "rgb(144, 199, 45)",
+                          color: "rgb(75, 85, 99)",
+                        }}
+                        required
+                        placeholder="Ex: 1000"
                       />
-                      <span
-                        className="ml-2"
-                        style={{ color: "rgb(75, 85, 99)" }}
+                      <select
+                        name="unidadeCapacidade"
+                        value={formData.unidadeCapacidade}
+                        onChange={handleChange}
+                        className="px-3 py-2 border border-l-0 border-gray-300 rounded-r-md focus:outline-none focus:ring-2"
+                        style={{
+                          "--tw-ring-color": "rgb(144, 199, 45)",
+                          color: "rgb(75, 85, 99)",
+                        }}
                       >
-                        Multicanal
-                      </span>
-                    </label>
-                  </div>
-
-                  {/* Seleção de quantidade de canais - só aparece quando multicanal está selecionado */}
-                  {formData.tipoInstrumento === "multicanal" && (
-                    <div className="mt-3 p-3 bg-blue-50 rounded-md border border-blue-200">
-                      <label
-                        className="block text-sm font-medium mb-2"
-                        style={{ color: "rgb(75, 85, 99)" }}
-                      >
-                        Quantidade de Canais
-                      </label>
-                      <div className="flex space-x-4">
-                        <label className="inline-flex items-center">
-                          <input
-                            type="radio"
-                            name="quantidadeCanais"
-                            value="8"
-                            checked={quantidadeCanais === 8}
-                            onChange={(e) =>
-                              handleQuantidadeCanaisChange(
-                                parseInt(e.target.value)
-                              )
-                            }
-                            className="form-radio h-4 w-4"
-                            style={{ color: "rgb(144, 199, 45)" }}
-                          />
-                          <span
-                            className="ml-2 text-sm"
-                            style={{ color: "rgb(75, 85, 99)" }}
-                          >
-                            8 Canais
-                          </span>
-                        </label>
-                        <label className="inline-flex items-center">
-                          <input
-                            type="radio"
-                            name="quantidadeCanais"
-                            value="12"
-                            checked={quantidadeCanais === 12}
-                            onChange={(e) =>
-                              handleQuantidadeCanaisChange(
-                                parseInt(e.target.value)
-                              )
-                            }
-                            className="form-radio h-4 w-4"
-                            style={{ color: "rgb(144, 199, 45)" }}
-                          />
-                          <span
-                            className="ml-2 text-sm"
-                            style={{ color: "rgb(75, 85, 99)" }}
-                          >
-                            12 Canais
-                          </span>{" "}
-                        </label>
-                      </div>
+                        <option value="µL">µL</option>
+                        <option value="mL">mL</option>
+                      </select>
                     </div>
-                  )}
-                </div>{" "}
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-1"
-                    style={{ color: "rgb(75, 85, 99)" }}
-                  >
-                    Faixa de Indicação
-                  </label>
-                  <input
-                    type="text"
-                    name="faixaIndicacao"
-                    value={formData.faixaIndicacao}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
-                    style={{
-                      "--tw-ring-color": "rgb(144, 199, 45)",
-                      color: "rgb(75, 85, 99)",
-                    }}
-                    placeholder="Ex: 100-1000 µL"
-                  />
-                </div>
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-1"
-                    style={{ color: "rgb(75, 85, 99)" }}
-                  >
-                    Faixa Calibrada
-                  </label>
-                  <input
-                    type="text"
-                    name="faixaCalibrada"
-                    value={formData.faixaCalibrada}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
-                    style={{
-                      "--tw-ring-color": "rgb(144, 199, 45)",
-                      color: "rgb(75, 85, 99)",
-                    }}
-                    placeholder="Ex: 200-1000 µL"
-                  />
-                </div>
+                  </div>
+                )}{" "}
+                {/* Tipo de Instrumento - só aparece para micropipetas */}
+                {formData.tipoEquipamento === "micropipeta" && (
+                  <div>
+                    <label
+                      className="block text-sm font-medium mb-1"
+                      style={{ color: "rgb(75, 85, 99)" }}
+                    >
+                      Tipo de Instrumento
+                    </label>
+                    <div className="flex space-x-4">
+                      <label className="inline-flex items-center">
+                        <input
+                          type="radio"
+                          name="tipoInstrumento"
+                          value="monocanal"
+                          checked={formData.tipoInstrumento === "monocanal"}
+                          onChange={handleChange}
+                          className="form-radio h-5 w-5"
+                          style={{ color: "rgb(144, 199, 45)" }}
+                        />
+                        <span
+                          className="ml-2"
+                          style={{ color: "rgb(75, 85, 99)" }}
+                        >
+                          Monocanal
+                        </span>
+                      </label>
+                      <label className="inline-flex items-center">
+                        <input
+                          type="radio"
+                          name="tipoInstrumento"
+                          value="multicanal"
+                          checked={formData.tipoInstrumento === "multicanal"}
+                          onChange={handleChange}
+                          className="form-radio h-5 w-5"
+                          style={{ color: "rgb(144, 199, 45)" }}
+                        />
+                        <span
+                          className="ml-2"
+                          style={{ color: "rgb(75, 85, 99)" }}
+                        >
+                          Multicanal
+                        </span>
+                      </label>
+                    </div>
+
+                    {/* Seleção de quantidade de canais - só aparece quando multicanal está selecionado */}
+                    {formData.tipoInstrumento === "multicanal" && (
+                      <div className="mt-3 p-3 bg-blue-50 rounded-md border border-blue-200">
+                        <label
+                          className="block text-sm font-medium mb-2"
+                          style={{ color: "rgb(75, 85, 99)" }}
+                        >
+                          Quantidade de Canais
+                        </label>
+                        <div className="flex space-x-4">
+                          <label className="inline-flex items-center">
+                            <input
+                              type="radio"
+                              name="quantidadeCanais"
+                              value="8"
+                              checked={quantidadeCanais === 8}
+                              onChange={(e) =>
+                                handleQuantidadeCanaisChange(
+                                  parseInt(e.target.value)
+                                )
+                              }
+                              className="form-radio h-4 w-4"
+                              style={{ color: "rgb(144, 199, 45)" }}
+                            />
+                            <span
+                              className="ml-2 text-sm"
+                              style={{ color: "rgb(75, 85, 99)" }}
+                            >
+                              8 Canais
+                            </span>
+                          </label>
+                          <label className="inline-flex items-center">
+                            <input
+                              type="radio"
+                              name="quantidadeCanais"
+                              value="12"
+                              checked={quantidadeCanais === 12}
+                              onChange={(e) =>
+                                handleQuantidadeCanaisChange(
+                                  parseInt(e.target.value)
+                                )
+                              }
+                              className="form-radio h-4 w-4"
+                              style={{ color: "rgb(144, 199, 45)" }}
+                            />
+                            <span
+                              className="ml-2 text-sm"
+                              style={{ color: "rgb(75, 85, 99)" }}
+                            >
+                              12 Canais
+                            </span>{" "}
+                          </label>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {/* Campos Faixa de Indicação e Faixa Calibrada - apenas para micropipetas */}
+                {formData.tipoEquipamento === "micropipeta" && (
+                  <>
+                    <div>
+                      <label
+                        className="block text-sm font-medium mb-1"
+                        style={{ color: "rgb(75, 85, 99)" }}
+                      >
+                        Faixa de Indicação
+                      </label>
+                      <input
+                        type="text"
+                        name="faixaIndicacao"
+                        value={formData.faixaIndicacao}
+                        onChange={handleChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                        style={{
+                          "--tw-ring-color": "rgb(144, 199, 45)",
+                          color: "rgb(75, 85, 99)",
+                        }}
+                        placeholder="Ex: 100-1000 µL"
+                      />
+                    </div>
+                    <div>
+                      <label
+                        className="block text-sm font-medium mb-1"
+                        style={{ color: "rgb(75, 85, 99)" }}
+                      >
+                        Faixa Calibrada
+                      </label>
+                      <input
+                        type="text"
+                        name="faixaCalibrada"
+                        value={formData.faixaCalibrada}
+                        onChange={handleChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                        style={{
+                          "--tw-ring-color": "rgb(144, 199, 45)",
+                          color: "rgb(75, 85, 99)",
+                        }}
+                        placeholder="Ex: 200-1000 µL"
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             </div>
             <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
@@ -1816,8 +2094,14 @@ const EmitirCertificadoPage = () => {
                   <TrendingUp
                     className="mr-2"
                     style={{ color: "rgb(144, 199, 45)" }}
-                  />
+                  />{" "}
                   Pontos de Calibração
+                  {formData.tipoEquipamento === "repipetador" && (
+                    <span className="ml-2 text-sm px-2 py-1 bg-blue-100 text-blue-800 rounded-md">
+                      {seringas.length} Seringa
+                      {seringas.length !== 1 ? "s" : ""}
+                    </span>
+                  )}
                   {formData.tipoInstrumento === "multicanal" && (
                     <span className="ml-2 text-sm px-2 py-1 bg-blue-100 text-blue-800 rounded-md">
                       {quantidadeCanais} Canais
@@ -1845,8 +2129,28 @@ const EmitirCertificadoPage = () => {
                       </>
                     )}
                   </button>{" "}
-                  {/* Controle de automação para multicanal ou botão adicionar para monocanal */}
-                  {formData.tipoInstrumento === "multicanal" ? (
+                  {/* Controles específicos para cada tipo de equipamento */}
+                  {formData.tipoEquipamento === "repipetador" ? (
+                    <button
+                      type="button"
+                      className="flex items-center text-sm px-3 py-1.5 rounded-md border border-blue-300"
+                      style={{
+                        backgroundColor: "rgb(239, 246, 255)",
+                        color: "rgb(37, 99, 235)",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.backgroundColor = "rgb(219, 234, 254)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.backgroundColor = "rgb(239, 246, 255)";
+                      }}
+                      onClick={adicionarSeringa}
+                      title="Adicionar nova seringa"
+                    >
+                      <Plus className="mr-2" />
+                      Adicionar Seringa
+                    </button>
+                  ) : formData.tipoInstrumento === "multicanal" ? (
                     <button
                       type="button"
                       onClick={() =>
@@ -1870,16 +2174,16 @@ const EmitirCertificadoPage = () => {
                   ) : (
                     <button
                       type="button"
-                      className="flex items-center text-sm px-3 py-1.5 rounded-md border border-green-300"
+                      className="flex items-center text-sm px-3 py-1.5 rounded-md border border-blue-300"
                       style={{
-                        backgroundColor: "rgb(240, 253, 244)",
-                        color: "rgb(144, 199, 45)",
+                        backgroundColor: "rgb(239, 246, 255)",
+                        color: "rgb(37, 99, 235)",
                       }}
                       onMouseEnter={(e) => {
-                        e.target.style.backgroundColor = "rgb(240, 253, 244)";
+                        e.target.style.backgroundColor = "rgb(219, 234, 254)";
                       }}
                       onMouseLeave={(e) => {
-                        e.target.style.backgroundColor = "rgb(240, 253, 244)";
+                        e.target.style.backgroundColor = "rgb(239, 246, 255)";
                       }}
                       onClick={adicionarPontoCalibracao}
                       title="Adicionar novo ponto de calibração"
@@ -1953,7 +2257,274 @@ const EmitirCertificadoPage = () => {
                 </div>
               )}{" "}
               <div className="space-y-6">
-                {formData.tipoInstrumento === "multicanal"
+                {formData.tipoEquipamento === "repipetador"
+                  ? // Layout para repipetador - agrupado por seringa
+                    seringas.map((seringa, seringaIndex) => (
+                      <div
+                        key={seringa.id}
+                        className="border-2 border-blue-200 rounded-lg p-4 bg-blue-50"
+                      >
+                        {/* Cabeçalho da seringa */}
+                        <div className="flex justify-between items-center mb-4">
+                          <h4 className="font-semibold text-blue-800 flex items-center">
+                            <TestTube className="mr-2" />
+                            Seringa {seringaIndex + 1}
+                          </h4>
+                          <div className="flex items-center gap-2">
+                            {seringas.length > 1 && (
+                              <button
+                                type="button"
+                                className="flex items-center px-2 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-md border border-red-200 transition-colors"                                onClick={() =>
+                                  removerSeringaDiretamente(
+                                    seringa.id,
+                                    seringaIndex + 1
+                                  )
+                                }
+                                title={`Remover seringa ${seringaIndex + 1}`}
+                              >
+                                <Trash2 className="mr-1" size={14} />
+                                <span className="text-xs">Remover Seringa</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Configuração do volume nominal da seringa */}
+                        <div className="mb-4 p-3 bg-white rounded-md border border-blue-200">
+                          <label
+                            className="block text-sm font-medium mb-1"
+                            style={{ color: "rgb(75, 85, 99)" }}
+                          >
+                            Volume Nominal da Seringa
+                          </label>
+                          <div className="flex max-w-xs">
+                            <input
+                              type="text"
+                              value={seringa.volumeNominal}
+                              onChange={(e) =>
+                                atualizarSeringa(
+                                  seringa.id,
+                                  "volumeNominal",
+                                  formatNumberInput(e.target.value)
+                                )
+                              }
+                              placeholder="Volume nominal"
+                              className="flex-1 px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2"
+                              style={{
+                                "--tw-ring-color": "rgb(144, 199, 45)",
+                                color: "rgb(75, 85, 99)",
+                              }}
+                              required
+                            />
+                            <select
+                              value={seringa.unidade}
+                              onChange={(e) =>
+                                atualizarSeringa(
+                                  seringa.id,
+                                  "unidade",
+                                  e.target.value
+                                )
+                              }
+                              className="px-3 py-2 border border-l-0 border-gray-300 rounded-r-md focus:outline-none focus:ring-2"
+                              style={{
+                                "--tw-ring-color": "rgb(144, 199, 45)",
+                                color: "rgb(75, 85, 99)",
+                              }}
+                            >
+                              {" "}
+                              <option value="µL">µL</option>
+                              <option value="mL">mL</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Container dos 3 pontos de calibração da seringa */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {seringa.pontosCalibra.map((ponto, pontoIndex) => (
+                            <div
+                              key={ponto.id}
+                              className="border border-gray-300 rounded-md p-3 bg-white relative"
+                            >
+                              <div className="mb-3">
+                                {" "}
+                                <div className="flex justify-between items-center mb-2">
+                                  <span className="text-sm font-medium text-gray-600">
+                                    Ponto {pontoIndex + 1}
+                                  </span>
+                                </div>
+                                <label
+                                  className="block text-sm font-medium mb-1"
+                                  style={{ color: "rgb(75, 85, 99)" }}
+                                >
+                                  Volume Nominal
+                                </label>
+                                <div className="flex">
+                                  <input
+                                    type="text"
+                                    value={ponto.volumeNominal}
+                                    onChange={(e) =>
+                                      atualizarPontoSeringa(
+                                        seringa.id,
+                                        ponto.id,
+                                        "volumeNominal",
+                                        formatNumberInput(e.target.value)
+                                      )
+                                    }
+                                    placeholder="Volume nominal"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2"
+                                    style={{
+                                      "--tw-ring-color": "rgb(144, 199, 45)",
+                                      color: "rgb(75, 85, 99)",
+                                    }}
+                                    required
+                                  />
+                                  <select
+                                    value={ponto.unidade}
+                                    onChange={(e) =>
+                                      atualizarPontoSeringa(
+                                        seringa.id,
+                                        ponto.id,
+                                        "unidade",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="px-3 py-2 border border-l-0 border-gray-300 rounded-r-md focus:outline-none focus:ring-2"
+                                    style={{
+                                      "--tw-ring-color": "rgb(144, 199, 45)",
+                                      color: "rgb(75, 85, 99)",
+                                    }}
+                                  >
+                                    <option value="µL">µL</option>
+                                    <option value="mL">mL</option>
+                                  </select>
+                                </div>
+                              </div>
+
+                              <div className="mb-3">
+                                <label
+                                  className="block text-sm font-medium mb-1"
+                                  style={{ color: "rgb(75, 85, 99)" }}
+                                >
+                                  Medições (mg)
+                                </label>
+                                <div className="space-y-2">
+                                  <textarea
+                                    value={ponto.valoresTexto || ""}
+                                    onChange={(e) =>
+                                      handleValoresChangeSeringa(
+                                        seringa.id,
+                                        ponto.id,
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder="Cole os valores separados por vírgula"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 resize-none"
+                                    style={{
+                                      "--tw-ring-color": "rgb(144, 199, 45)",
+                                      color: "rgb(75, 85, 99)",
+                                    }}
+                                    rows="2"
+                                  />
+
+                                  {/* Mostrar os valores processados */}
+                                  {ponto.medicoes.some((m) => m !== "") && (
+                                    <div className="mt-2">
+                                      <div className="text-xs text-gray-500 mb-1">
+                                        Valores detectados:
+                                      </div>
+                                      <div className="grid grid-cols-3 gap-1">
+                                        {ponto.medicoes
+                                          .slice(0, 6)
+                                          .map((medicao, index) => (
+                                            <div
+                                              key={index}
+                                              className={`px-1 py-1 text-xs rounded text-center ${
+                                                medicao !== ""
+                                                  ? "bg-green-100 text-green-800 border border-green-200"
+                                                  : "bg-gray-100 text-gray-400 border border-gray-200"
+                                              }`}
+                                            >
+                                              {medicao !== ""
+                                                ? medicao
+                                                : `M${index + 1}`}
+                                            </div>
+                                          ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Resultados dos cálculos */}
+                              {ponto.media !== null && (
+                                <div className="bg-gray-50 p-2 rounded-md">
+                                  <h5 className="font-medium mb-2 text-xs text-gray-700">
+                                    Resultados
+                                  </h5>
+                                  <div className="space-y-2 text-xs">
+                                    <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
+                                      <div className="text-xs text-gray-500 mb-1">
+                                        Mean Volume
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span className="font-medium">
+                                          {ponto.mediaMassa?.toFixed(2)} mg
+                                        </span>
+                                        <span className="text-green-600 font-medium">
+                                          {ponto.media?.toFixed(2)} µL
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
+                                      <div className="text-xs text-gray-500 mb-1">
+                                        Accuracy
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span className="font-medium">
+                                          {ponto.inexatidao?.toFixed(2)} µL
+                                        </span>
+                                        <span
+                                          className={
+                                            Math.abs(
+                                              ponto.inexatidaoPercentual
+                                            ) > 5
+                                              ? "text-red-600 font-medium"
+                                              : "text-green-600 font-medium"
+                                          }
+                                        >
+                                          {ponto.inexatidaoPercentual?.toFixed(
+                                            2
+                                          )}
+                                          %
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
+                                      <div className="text-xs text-gray-500 mb-1">
+                                        Precision
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span className="font-medium">
+                                          SD: {ponto.desvioPadrao?.toFixed(2)}
+                                        </span>
+                                        <span className="text-blue-600 font-medium">
+                                          CV:{" "}
+                                          {ponto.coeficienteVariacao?.toFixed(
+                                            2
+                                          )}
+                                          %
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))
+                  : formData.tipoInstrumento === "multicanal"
                   ? // Layout para micropipeta multicanal - agrupado por canal
                     Array.from({ length: numeroCanais }, (_, canalIndex) => {
                       const canalNum = canalIndex + 1;
@@ -1981,12 +2552,11 @@ const EmitirCertificadoPage = () => {
                             {numeroCanais > 1 && (
                               <button
                                 type="button"
-                                className="flex items-center px-2 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-md border border-red-200 transition-colors"
-                                onClick={() => {
+                                className="flex items-center px-2 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-md border border-red-200 transition-colors"                                onClick={() => {
                                   const primeiroPontoDoCanal =
                                     pontosDoCanalAtual[0];
                                   if (primeiroPontoDoCanal) {
-                                    confirmarRemoverPonto(
+                                    removerPontoDiretamente(
                                       primeiroPontoDoCanal.id,
                                       canalNum,
                                       true
@@ -2182,18 +2752,37 @@ const EmitirCertificadoPage = () => {
                                 )}
                               </div>
                             ))}
-                          </div>
-                        </div>
+                          </div>                        </div>
                       );
-                    })
-                  : // Layout para micropipeta monocanal - layout original
-                    pontosCalibra.map((ponto, pontoIndex) => (
-                      <div
-                        key={ponto.id}
-                        className="border border-gray-300 rounded-md p-3 bg-white relative"
-                      >
-                        <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
-                          <div className="flex-1 min-w-[200px]">
+                    })                  : // Layout para micropipeta monocanal - layout em grid similar às multicanais
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {pontosCalibra.map((ponto, pontoIndex) => (
+                        <div
+                          key={ponto.id}
+                          className="border border-gray-300 rounded-md p-3 bg-white"
+                        >
+                          <div className="mb-3">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="text-sm font-medium text-gray-600">
+                                Ponto {pontoIndex + 1}
+                              </span>
+                              {pontosCalibra.length > 1 && (
+                                <button
+                                  type="button"
+                                  className="flex items-center px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded-md border border-red-200 transition-colors text-xs"                                  onClick={() =>
+                                    removerPontoDiretamente(
+                                      ponto.id,
+                                      pontoIndex + 1
+                                    )
+                                  }
+                                  title="Remover ponto de calibração"
+                                >
+                                  <Trash2 className="mr-1" size={12} />
+                                  Remover
+                                </button>
+                              )}
+                            </div>
+
                             <label
                               className="block text-sm font-medium mb-1"
                               style={{ color: "rgb(75, 85, 99)" }}
@@ -2238,163 +2827,122 @@ const EmitirCertificadoPage = () => {
                               </select>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <div className="px-3 py-2 rounded-md bg-gray-100 text-center border border-gray-200">
-                              <span className="text-xs text-gray-500">
-                                Ponto #{pontoIndex + 1}
-                              </span>
-                            </div>
 
-                            {pontosCalibra.length > 1 && (
-                              <button
-                                type="button"
-                                className="flex items-center px-2 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-md border border-red-200 transition-colors"
-                                onClick={() =>
-                                  confirmarRemoverPonto(
-                                    ponto.id,
-                                    pontoIndex + 1
-                                  )
-                                }
-                                title="Remover ponto de calibração"
-                              >
-                                <Trash2 className="mr-1" />
-                                <span className="text-xs">Remover</span>
-                              </button>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="mb-4">
-                          <label
-                            className="block text-sm font-medium mb-1"
-                            style={{ color: "rgb(75, 85, 99)" }}
-                          >
-                            Medições (mg)
-                          </label>
-                          <div className="space-y-2">
-                            <textarea
-                              value={ponto.valoresTexto || ""}
-                              onChange={(e) =>
-                                handleValoresChange(ponto.id, e.target.value)
-                              }
-                              placeholder="Cole os valores separados por vírgula. Ex: 99.2, 99.12, 99.17, 99.16, 99.26"
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 resize-none"
-                              style={{
-                                "--tw-ring-color": "rgb(144, 199, 45)",
-                                color: "rgb(75, 85, 99)",
-                              }}
-                              rows="3"
-                            />
-                            <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded border border-blue-200">
-                              <strong>💡 Dica:</strong> Copie os valores do
-                              Notion e cole aqui.
-                            </div>
-
-                            {/* Mostrar os valores processados */}
-                            {ponto.medicoes.some((m) => m !== "") && (
-                              <div className="mt-2">
-                                <div className="text-xs text-gray-500 mb-1">
-                                  Valores detectados:
-                                </div>
-                                <div className="grid grid-cols-5 gap-1">
-                                  {ponto.medicoes
-                                    .slice(0, 10)
-                                    .map((medicao, index) => (
-                                      <div
-                                        key={index}
-                                        className={`px-2 py-1 text-xs rounded text-center ${
-                                          medicao !== ""
-                                            ? "bg-green-100 text-green-800 border border-green-200"
-                                            : "bg-gray-100 text-gray-400 border border-gray-200"
-                                        }`}
-                                      >
-                                        {medicao !== ""
-                                          ? medicao
-                                          : `M${index + 1}`}
-                                      </div>
-                                    ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Resultados dos cálculos */}
-                        {ponto.media !== null && (
-                          <div className="bg-gray-50 p-3 rounded-md">
-                            <h4
-                              className="font-medium mb-2 flex items-center py-1.5 px-2 border-l-4"
-                              style={{
-                                color: "rgb(75, 85, 99)",
-                                borderLeftColor: "rgb(144, 199, 45)",
-                              }}
+                          <div className="mb-3">
+                            <label
+                              className="block text-sm font-medium mb-1"
+                              style={{ color: "rgb(75, 85, 99)" }}
                             >
-                              <Calculator
-                                className="mr-2"
-                                style={{ color: "rgb(144, 199, 45)" }}
+                              Medições (mg)
+                            </label>
+                            <div className="space-y-2">
+                              <textarea
+                                value={ponto.valoresTexto || ""}
+                                onChange={(e) =>
+                                  handleValoresChange(ponto.id, e.target.value)
+                                }
+                                placeholder="Cole os valores separados por vírgula"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 resize-none"
+                                style={{
+                                  "--tw-ring-color": "rgb(144, 199, 45)",
+                                  color: "rgb(75, 85, 99)",
+                                }}
+                                rows="2"
                               />
-                              Resultados
-                            </h4>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-                              <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
-                                <div className="text-xs text-gray-500 mb-1">
-                                  Mean Volume
+
+                              {/* Mostrar os valores processados */}
+                              {ponto.medicoes.some((m) => m !== "") && (
+                                <div className="mt-2">
+                                  <div className="text-xs text-gray-500 mb-1">
+                                    Valores detectados:
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-1">
+                                    {ponto.medicoes
+                                      .slice(0, 6)
+                                      .map((medicao, index) => (
+                                        <div
+                                          key={index}
+                                          className={`px-1 py-1 text-xs rounded text-center ${
+                                            medicao !== ""
+                                              ? "bg-green-100 text-green-800 border border-green-200"
+                                              : "bg-gray-100 text-gray-400 border border-gray-200"
+                                          }`}
+                                        >
+                                          {medicao !== ""
+                                            ? medicao
+                                            : `M${index + 1}`}
+                                        </div>
+                                      ))}
+                                  </div>
+                                  {/* Mostrar mais valores se houver */}
+                                  {ponto.medicoes.filter(m => m !== "").length > 6 && (
+                                    <div className="mt-1 text-xs text-gray-500 text-center">
+                                      +{ponto.medicoes.filter(m => m !== "").length - 6} valores adicionais
+                                    </div>
+                                  )}
                                 </div>
-                                <div className="flex justify-between">
-                                  <span className="font-medium">
-                                    {ponto.mediaMassa?.toFixed(2)} mg
-                                  </span>
-                                  <span className="text-green-600 font-medium">
-                                    {ponto.media?.toFixed(2)} µL
-                                  </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Resultados dos cálculos */}
+                          {ponto.media !== null && (
+                            <div className="bg-gray-50 p-2 rounded-md">
+                              <h5 className="font-medium mb-2 text-xs text-gray-700">
+                                Resultados
+                              </h5>
+                              <div className="space-y-2 text-xs">
+                                <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
+                                  <div className="text-xs text-gray-500 mb-1">
+                                    Mean Volume
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="font-medium">
+                                      {ponto.mediaMassa?.toFixed(2)} mg
+                                    </span>
+                                    <span className="text-green-600 font-medium">
+                                      {ponto.media?.toFixed(2)} µL
+                                    </span>
+                                  </div>
                                 </div>
-                                <div className="text-xs text-gray-500 mt-1">
-                                  Massa média × Fator Z
+                                <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
+                                  <div className="text-xs text-gray-500 mb-1">
+                                    Accuracy
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="font-medium">
+                                      {ponto.inexatidao?.toFixed(2)} µL
+                                    </span>
+                                    <span
+                                      className={
+                                        Math.abs(ponto.inexatidaoPercentual) > 5
+                                          ? "text-red-600 font-medium"
+                                          : "text-green-600 font-medium"
+                                      }
+                                    >
+                                      {ponto.inexatidaoPercentual?.toFixed(2)}%
+                                    </span>
+                                  </div>
                                 </div>
-                              </div>
-                              <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
-                                <div className="text-xs text-gray-500 mb-1">
-                                  Accuracy
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="font-medium">
-                                    {ponto.inexatidao?.toFixed(2)} µL
-                                  </span>
-                                  <span
-                                    className={
-                                      Math.abs(ponto.inexatidaoPercentual) > 5
-                                        ? "text-red-600 font-medium"
-                                        : "text-green-600 font-medium"
-                                    }
-                                  >
-                                    {ponto.inexatidaoPercentual?.toFixed(2)}%
-                                  </span>
-                                </div>
-                                <div className="text-xs text-gray-500 mt-1">
-                                  Mean Volume - Volume Nominal
-                                </div>
-                              </div>
-                              <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
-                                <div className="text-xs text-gray-500 mb-1">
-                                  Precision
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="font-medium">
-                                    SD: {ponto.desvioPadrao?.toFixed(2)} µL
-                                  </span>
-                                  <span className="text-blue-600 font-medium">
-                                    CV: {ponto.coeficienteVariacao?.toFixed(2)}%
-                                  </span>
-                                </div>
-                                <div className="text-xs text-gray-500 mt-1">
-                                  Desvio padrão e coeficiente de variação
+                                <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
+                                  <div className="text-xs text-gray-500 mb-1">
+                                    Precision
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="font-medium">
+                                      SD: {ponto.desvioPadrao?.toFixed(2)}
+                                    </span>
+                                    <span className="text-blue-600 font-medium">
+                                      CV: {ponto.coeficienteVariacao?.toFixed(2)}%
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                          )}                        </div>
+                      ))}
+                    </div>
+                }
               </div>
             </div>{" "}
             <div className="flex justify-end">
@@ -2410,26 +2958,10 @@ const EmitirCertificadoPage = () => {
                 }
                 onMouseLeave={(e) =>
                   (e.target.style.backgroundColor = "rgb(144, 199, 45)")
-                }
-              >
+                }              >
                 Gerar Certificado
               </button>
             </div>
-            {/* Diálogo de confirmação para remoção de ponto */}{" "}
-            <ConfirmDialog
-              isOpen={confirmDialog.isOpen}
-              title={confirmDialog.title}
-              message={confirmDialog.message}
-              onCancel={(e) => {
-                e.preventDefault(); // Evita o submit do formulário
-                setConfirmDialog({ ...confirmDialog, isOpen: false });
-              }}
-              onConfirm={(e) => {
-                e.preventDefault(); // Evita o submit do formulário
-                removerPonto(confirmDialog.pontoId);
-                setConfirmDialog({ ...confirmDialog, isOpen: false });
-              }}
-            />{" "}
           </form>
         )}
       </div>
