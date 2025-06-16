@@ -22,23 +22,31 @@ pdfMake.fonts = {
 /**
  * Serviço responsável pela geração de certificados de calibração em PDF
  */
-export class PDFService {
-    /**
+export class PDFService {    /**
      * Gera um certificado de calibração em PDF seguindo o modelo Bio Research
      * @param {Object} dadosCertificado - Dados do certificado
      * @param {Object} cliente - Dados do cliente
-     * @param {Array} pontosCalibra - Pontos de calibração
+     * @param {Array} pontosCalibra - Pontos de calibração (ou seringas para repipetadores)
      * @param {number} fatorZ - Fator Z calculado
+     * @param {Array} seringas - Dados das seringas (opcional, para repipetadores)
      */
-    static async gerarCertificadoCalibracao(dadosCertificado, cliente, pontosCalibra, fatorZ) {
+    static async gerarCertificadoCalibracao(dadosCertificado, cliente, pontosCalibra, fatorZ, seringas = null) {
         // Validações básicas
-        if (!dadosCertificado || !cliente || !pontosCalibra || !fatorZ) {
+        if (!dadosCertificado || !cliente || !fatorZ) {
             throw new Error('Dados insuficientes para gerar o certificado');
         }
 
-        if (pontosCalibra.length === 0) {
-            throw new Error('É necessário ter pelo menos um ponto de calibração');
-        }        // Carregar a imagem do cabeçalho
+        // Verificar se é repipetador e tem seringas
+        if (dadosCertificado.tipoEquipamento === 'repipetador') {
+            if (!seringas || seringas.length === 0) {
+                throw new Error('É necessário ter pelo menos uma seringa para repipetadores');
+            }
+        } else {
+            // Para micropipetas, validar pontos de calibração
+            if (!pontosCalibra || pontosCalibra.length === 0) {
+                throw new Error('É necessário ter pelo menos um ponto de calibração');
+            }
+        }// Carregar a imagem do cabeçalho
         const imagemCabecalho = await PDFService.carregarImagemCabecalho();
 
         // Carregar a imagem da assinatura
@@ -99,6 +107,7 @@ export class PDFService {
             },            // Faixa vertical verde no lado esquerdo como elemento decorativo
             background: function (currentPage, pageSize) {
                 const isMonocanal = dadosCertificado.tipoInstrumento === 'monocanal';
+                const isRepipetador = dadosCertificado.tipoEquipamento === 'repipetador';
 
                 return [
                     {
@@ -106,11 +115,11 @@ export class PDFService {
                             {
                                 type: 'rect',
                                 x: 0,
-                                y: isMonocanal
+                                y: (isMonocanal || isRepipetador)
                                     ? (imagemCabecalho ? 113 : 60)
                                     : (imagemCabecalho ? 140 : 80),
                                 w: 20,
-                                h: isMonocanal
+                                h: (isMonocanal || isRepipetador)
                                     ? pageSize.height - (imagemCabecalho ? 120 : 60) - (imagemRodape ? 140 : 100)
                                     : pageSize.height - (imagemCabecalho ? 140 : 80) - (imagemRodape ? 140 : 100),
                                 color: '#D8E9A8'
@@ -124,7 +133,7 @@ export class PDFService {
                     text: `CERTIFICADO DE CALIBRAÇÃO - BIORESEARCH DO BRASIL - Nº ${numeroCertificado}`,
                     style: 'title',
                     alignment: 'left',
-                    margin: dadosCertificado.tipoInstrumento === 'monocanal' ? [0, -30, 0, 2] : [0, 0, 0, 2]
+                    margin: (dadosCertificado.tipoInstrumento === 'monocanal' || dadosCertificado.tipoEquipamento === 'repipetador') ? [0, -30, 0, 2] : [0, 0, 0, 2]
                 },
                 {
                     text: 'LABORATÓRIO DE CALIBRAÇÃO E ENSAIO',
@@ -134,30 +143,27 @@ export class PDFService {
                 },
 
                 // 2. Dados do cliente e instrumento
-                ...PDFService.criarBlocoDados(dadosCertificado, cliente),
-
-                // 3. Tabela de medições
+                ...PDFService.criarBlocoDados(dadosCertificado, cliente),                // 3. Tabela de medições
                 {
                     text: 'Tabela de Valores Obtidos:',
                     style: 'sectionTitle',
                     margin: [0, 0, 0, 10]
                 },
-                ...PDFService.criarTabelasMedicoes(pontosCalibra, dadosCertificado),
-
-                // 4. Padrões utilizados
+                ...(dadosCertificado.tipoEquipamento === 'repipetador'
+                    ? PDFService.criarTabelasRepipetador(seringas, dadosCertificado)
+                    : PDFService.criarTabelasMedicoes(pontosCalibra, dadosCertificado)),                // 4. Padrões utilizados
                 {
                     text: 'Padrões Utilizados:',
                     style: 'sectionTitle',
                     margin: [0, 20, 0, 8]
-                },
-                {
+                }, {
                     text: [
                         'Termohigrômetro Digital HT600 Instrutherm, Certificado RBC Nº CAL – C 15153/24, (Validade 08/2025).\n',
-                        'Balança Analítica Mether Toledo SAG250, Certificado RBC Nº CAL – A 15152/24, (Validade 08/2025).'
+                        'Balança Analítica Metter Toledo SAG250, Certificado RBC Nº CAL – A 15152/24, (Validade 08/2025).'
                     ],
                     style: 'normalText',
                     margin: [0, 0, 0, 15]
-                },                // 5. Parâmetros ambientais
+                },// 5. Parâmetros ambientais
                 {
                     text: 'Parâmetros:',
                     style: 'sectionTitle',
@@ -218,8 +224,8 @@ export class PDFService {
                                 style: 'signatureSubtext',
                                 alignment: 'center'
                             }
-                        ]),                    ],
-                    margin: dadosCertificado.tipoInstrumento === 'monocanal' ? [0, 1, 0, 0] : [0, 5, 0, 0],
+                        ]),],
+                    margin: (dadosCertificado.tipoInstrumento === 'monocanal' || dadosCertificado.tipoEquipamento === 'repipetador') ? [0, 1, 0, 0] : [0, 5, 0, 0],
                     unbreakable: true
                 }
             ], styles: {
@@ -351,7 +357,7 @@ export class PDFService {
 
         console.warn('Não foi possível carregar a imagem do cabeçalho. Usando fallback em texto.');
         return null;
-    }    /**
+    }/**
      * Carrega a imagem da assinatura com múltiplos fallbacks
      * @returns {Promise<string|null>} - Imagem em base64 ou null se falhar
      */
@@ -428,8 +434,7 @@ export class PDFService {
      */
     static criarBlocoDados(dadosCertificado, cliente) {
         const enderecoCompleto = PDFService.formatarEnderecoCompleto(cliente);
-
-        return [
+        const isRepipetador = dadosCertificado.tipoEquipamento === 'repipetador'; return [
             {
                 text: [
                     { text: 'CLIENTE: ', style: 'staticText' },
@@ -439,22 +444,22 @@ export class PDFService {
                     { text: `${enderecoCompleto.toUpperCase()}\n`, style: 'dynamicText' },
 
                     { text: 'INSTRUMENTO: ', style: 'staticText' },
-                    { text: `MICROPIPETA ${dadosCertificado.tipoInstrumento === 'monocanal' ? 'MONOCANAL' : 'MULTICANAL'}\n`, style: 'dynamicText' },
+                    { text: `${isRepipetador ? 'REPIPETADOR' : `MICROPIPETA ${dadosCertificado.tipoInstrumento === 'monocanal' ? 'MONOCANAL' : 'MULTICANAL'}`}\n`, style: 'dynamicText' },
 
-                    { text: 'FAIXA DE INDICAÇÃO: ', style: 'staticText' },
-                    { text: `${dadosCertificado.faixaIndicacao || dadosCertificado.capacidade + ' ' + dadosCertificado.unidadeCapacidade}\n`, style: 'dynamicText' },
+                    ...(isRepipetador ? [] : [
+                        { text: 'FAIXA DE INDICAÇÃO: ', style: 'staticText' },
+                        { text: `${dadosCertificado.faixaIndicacao || dadosCertificado.capacidade + ' ' + dadosCertificado.unidadeCapacidade}\n`, style: 'dynamicText' },
 
-                    { text: 'FAIXA CALIBRADA: ', style: 'staticText' },
-                    { text: `${dadosCertificado.faixaCalibrada || dadosCertificado.capacidade + ' ' + dadosCertificado.unidadeCapacidade}\n`, style: 'dynamicText' },
-
-                    { text: 'FABRICANTE: ', style: 'staticText' },
+                        { text: 'FAIXA CALIBRADA: ', style: 'staticText' },
+                        { text: `${dadosCertificado.faixaCalibrada || dadosCertificado.capacidade + ' ' + dadosCertificado.unidadeCapacidade}\n`, style: 'dynamicText' },
+                    ]),                    { text: 'FABRICANTE: ', style: 'staticText' },
                     { text: `${dadosCertificado.marcaPipeta?.toUpperCase() || 'N/A'}\n`, style: 'dynamicText' },
 
                     { text: 'Nº DE IDENTIFICAÇÃO: ', style: 'staticText' },
-                    { text: `${dadosCertificado.numeroIdentificacao || dadosCertificado.numeroPipeta}\n`, style: 'dynamicText' },
+                    { text: `${dadosCertificado.numeroIdentificacao || 'N/A'}\n`, style: 'dynamicText' },
 
                     { text: 'Nº DE SÉRIE: ', style: 'staticText' },
-                    { text: `${dadosCertificado.numeroPipeta}\n`, style: 'dynamicText' },
+                    { text: `${dadosCertificado.numeroPipeta || 'N/A'}\n`, style: 'dynamicText' },
 
                     { text: 'MODELO: ', style: 'staticText' },
                     { text: `${dadosCertificado.modeloPipeta?.toUpperCase() || 'N/A'}\n`, style: 'dynamicText' },
@@ -751,8 +756,10 @@ export class PDFService {
         return blocos;
     }    /**
      * Cria o bloco de parâmetros ambientais
-     */    static criarBlocoParametros(dadosCertificado, fatorZ) {
+     */
+    static criarBlocoParametros(dadosCertificado, fatorZ) {
         const isMonocanal = dadosCertificado.tipoInstrumento === 'monocanal';
+        const isRepipetador = dadosCertificado.tipoEquipamento === 'repipetador';
 
         return [
             {
@@ -761,7 +768,9 @@ export class PDFService {
                     { text: `${dadosCertificado.temperatura} ºC\n`, style: 'dynamicText' },
 
                     { text: 'Umidade Relativa do Ar     : ', style: 'staticText' },
-                    { text: `${dadosCertificado.umidadeRelativa}%\n`, style: 'dynamicText' }, { text: 'Valor Z de correção            : ', style: 'staticText' },
+                    { text: `${dadosCertificado.umidadeRelativa}%\n`, style: 'dynamicText' },
+
+                    { text: 'Valor Z de correção            : ', style: 'staticText' },
                     { text: `${PDFService.formatarFatorZ(fatorZ)} µL/mg\n`, style: 'dynamicText' }, { text: 'Prova de acordo                 : ', style: 'staticText' },
                     { text: 'ISO8655', style: 'dynamicText' }
                 ],
@@ -856,5 +865,31 @@ export class PDFService {
      */
     static abrirPDF(pdf) {
         pdf.open();
+    }    /**
+     * Cria tabelas específicas para repipetadores (organizadas por seringa)
+     * Cada seringa tem seus próprios pontos de calibração
+     */
+    static criarTabelasRepipetador(seringas, dadosCertificado = {}) {
+        if (!seringas || seringas.length === 0) {
+            return [];
+        }
+
+        const tabelas = [];        seringas.forEach((seringa, seringaIndex) => {
+            // Título da seringa
+            tabelas.push({
+                text: `Seringa de ${seringa.volumeNominal}${seringa.unidade || 'µL'}:`,
+                style: 'canalTitle',
+                margin: [0, seringaIndex === 0 ? 0 : 20, 0, 10]
+            });
+
+            // Criar tabelas dos pontos desta seringa
+            const pontosSeringa = seringa.pontosCalibra || [];
+            if (pontosSeringa.length > 0) {
+                const tabelasDosPontos = PDFService.criarTabelasLadoALado(pontosSeringa);
+                tabelas.push(...tabelasDosPontos);
+            }
+        });
+
+        return tabelas;
     }
 }
