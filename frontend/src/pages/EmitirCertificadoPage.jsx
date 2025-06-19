@@ -1033,7 +1033,8 @@ const EmitirCertificadoPage = () => {
         inexatidaoPercentual: null,
         desvioPadrao: null,
       },
-    ]);  }; 
+    ]);
+  };
 
   // Função para remover ponto diretamente (sem confirmação)
   const removerPontoDiretamente = (id, numeroPonto, isCanal = false) => {
@@ -1890,15 +1891,14 @@ const EmitirCertificadoPage = () => {
                     }}
                     placeholder="Ex: ID001, BIO123, etc. (opcional)"
                   />{" "}
-                </div>
-                {/* Campo Capacidade - apenas para micropipetas */}
+                </div>                {/* Campo Volume - apenas para micropipetas */}
                 {formData.tipoEquipamento === "micropipeta" && (
                   <div>
                     <label
                       className="block text-sm font-medium mb-1"
                       style={{ color: "rgb(75, 85, 99)" }}
                     >
-                      Capacidade
+                      Volume
                     </label>
                     <div className="flex">
                       <input
@@ -2257,101 +2257,332 @@ const EmitirCertificadoPage = () => {
                 </div>
               )}{" "}
               <div className="space-y-6">
-                {formData.tipoEquipamento === "repipetador"
-                  ? // Layout para repipetador - agrupado por seringa
-                    seringas.map((seringa, seringaIndex) => (
+                {formData.tipoEquipamento === "repipetador" ? (
+                  // Layout para repipetador - agrupado por seringa
+                  seringas.map((seringa, seringaIndex) => (
+                    <div
+                      key={seringa.id}
+                      className="border-2 border-blue-200 rounded-lg p-4 bg-blue-50"
+                    >
+                      {/* Cabeçalho da seringa */}
+                      <div className="flex justify-between items-center mb-4">
+                        <h4 className="font-semibold text-blue-800 flex items-center">
+                          <TestTube className="mr-2" />
+                          Seringa {seringaIndex + 1}
+                        </h4>
+                        <div className="flex items-center gap-2">
+                          {seringas.length > 1 && (
+                            <button
+                              type="button"
+                              className="flex items-center px-2 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-md border border-red-200 transition-colors"
+                              onClick={() =>
+                                removerSeringaDiretamente(
+                                  seringa.id,
+                                  seringaIndex + 1
+                                )
+                              }
+                              title={`Remover seringa ${seringaIndex + 1}`}
+                            >
+                              <Trash2 className="mr-1" size={14} />
+                              <span className="text-xs">Remover Seringa</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Configuração do volume nominal da seringa */}
+                      <div className="mb-4 p-3 bg-white rounded-md border border-blue-200">
+                        <label
+                          className="block text-sm font-medium mb-1"
+                          style={{ color: "rgb(75, 85, 99)" }}
+                        >
+                          Volume Nominal da Seringa
+                        </label>
+                        <div className="flex max-w-xs">
+                          <input
+                            type="text"
+                            value={seringa.volumeNominal}
+                            onChange={(e) =>
+                              atualizarSeringa(
+                                seringa.id,
+                                "volumeNominal",
+                                formatNumberInput(e.target.value)
+                              )
+                            }
+                            placeholder="Volume nominal"
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2"
+                            style={{
+                              "--tw-ring-color": "rgb(144, 199, 45)",
+                              color: "rgb(75, 85, 99)",
+                            }}
+                            required
+                          />
+                          <select
+                            value={seringa.unidade}
+                            onChange={(e) =>
+                              atualizarSeringa(
+                                seringa.id,
+                                "unidade",
+                                e.target.value
+                              )
+                            }
+                            className="px-3 py-2 border border-l-0 border-gray-300 rounded-r-md focus:outline-none focus:ring-2"
+                            style={{
+                              "--tw-ring-color": "rgb(144, 199, 45)",
+                              color: "rgb(75, 85, 99)",
+                            }}
+                          >
+                            {" "}
+                            <option value="µL">µL</option>
+                            <option value="mL">mL</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Container dos 3 pontos de calibração da seringa */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {seringa.pontosCalibra.map((ponto, pontoIndex) => (
+                          <div
+                            key={ponto.id}
+                            className="border border-gray-300 rounded-md p-3 bg-white relative"
+                          >
+                            <div className="mb-3">
+                              {" "}
+                              <div className="flex justify-between items-center mb-2">
+                                <span className="text-sm font-medium text-gray-600">
+                                  Ponto {pontoIndex + 1}
+                                </span>
+                              </div>
+                              <label
+                                className="block text-sm font-medium mb-1"
+                                style={{ color: "rgb(75, 85, 99)" }}
+                              >
+                                Volume Nominal
+                              </label>
+                              <div className="flex">
+                                <input
+                                  type="text"
+                                  value={ponto.volumeNominal}
+                                  onChange={(e) =>
+                                    atualizarPontoSeringa(
+                                      seringa.id,
+                                      ponto.id,
+                                      "volumeNominal",
+                                      formatNumberInput(e.target.value)
+                                    )
+                                  }
+                                  placeholder="Volume nominal"
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2"
+                                  style={{
+                                    "--tw-ring-color": "rgb(144, 199, 45)",
+                                    color: "rgb(75, 85, 99)",
+                                  }}
+                                  required
+                                />
+                                <select
+                                  value={ponto.unidade}
+                                  onChange={(e) =>
+                                    atualizarPontoSeringa(
+                                      seringa.id,
+                                      ponto.id,
+                                      "unidade",
+                                      e.target.value
+                                    )
+                                  }
+                                  className="px-3 py-2 border border-l-0 border-gray-300 rounded-r-md focus:outline-none focus:ring-2"
+                                  style={{
+                                    "--tw-ring-color": "rgb(144, 199, 45)",
+                                    color: "rgb(75, 85, 99)",
+                                  }}
+                                >
+                                  <option value="µL">µL</option>
+                                  <option value="mL">mL</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            <div className="mb-3">
+                              <label
+                                className="block text-sm font-medium mb-1"
+                                style={{ color: "rgb(75, 85, 99)" }}
+                              >
+                                Medições (mg)
+                              </label>
+                              <div className="space-y-2">
+                                <textarea
+                                  value={ponto.valoresTexto || ""}
+                                  onChange={(e) =>
+                                    handleValoresChangeSeringa(
+                                      seringa.id,
+                                      ponto.id,
+                                      e.target.value
+                                    )
+                                  }
+                                  placeholder="Cole os valores separados por vírgula"
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 resize-none"
+                                  style={{
+                                    "--tw-ring-color": "rgb(144, 199, 45)",
+                                    color: "rgb(75, 85, 99)",
+                                  }}
+                                  rows="2"
+                                />
+
+                                {/* Mostrar os valores processados */}
+                                {ponto.medicoes.some((m) => m !== "") && (
+                                  <div className="mt-2">
+                                    <div className="text-xs text-gray-500 mb-1">
+                                      Valores detectados:
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-1">
+                                      {ponto.medicoes
+                                        .slice(0, 6)
+                                        .map((medicao, index) => (
+                                          <div
+                                            key={index}
+                                            className={`px-1 py-1 text-xs rounded text-center ${
+                                              medicao !== ""
+                                                ? "bg-green-100 text-green-800 border border-green-200"
+                                                : "bg-gray-100 text-gray-400 border border-gray-200"
+                                            }`}
+                                          >
+                                            {medicao !== ""
+                                              ? medicao
+                                              : `M${index + 1}`}
+                                          </div>
+                                        ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Resultados dos cálculos */}
+                            {ponto.media !== null && (
+                              <div className="bg-gray-50 p-2 rounded-md">
+                                <h5 className="font-medium mb-2 text-xs text-gray-700">
+                                  Resultados
+                                </h5>
+                                <div className="space-y-2 text-xs">
+                                  <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
+                                    <div className="text-xs text-gray-500 mb-1">
+                                      Mean Volume
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="font-medium">
+                                        {ponto.mediaMassa?.toFixed(2)} mg
+                                      </span>
+                                      <span className="text-green-600 font-medium">
+                                        {ponto.media?.toFixed(2)} µL
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
+                                    <div className="text-xs text-gray-500 mb-1">
+                                      Accuracy
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="font-medium">
+                                        {ponto.inexatidao?.toFixed(2)} µL
+                                      </span>
+                                      <span
+                                        className={
+                                          Math.abs(ponto.inexatidaoPercentual) >
+                                          5
+                                            ? "text-red-600 font-medium"
+                                            : "text-green-600 font-medium"
+                                        }
+                                      >
+                                        {ponto.inexatidaoPercentual?.toFixed(2)}
+                                        %
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
+                                    <div className="text-xs text-gray-500 mb-1">
+                                      Precision
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="font-medium">
+                                        SD: {ponto.desvioPadrao?.toFixed(2)}
+                                      </span>
+                                      <span className="text-blue-600 font-medium">
+                                        CV:{" "}
+                                        {ponto.coeficienteVariacao?.toFixed(2)}%
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                ) : formData.tipoInstrumento === "multicanal" ? (
+                  // Layout para micropipeta multicanal - agrupado por canal
+                  Array.from({ length: numeroCanais }, (_, canalIndex) => {
+                    const canalNum = canalIndex + 1;
+                    const pontosDoCanalAtual = pontosCalibra.filter(
+                      (p) => p.canal === canalNum
+                    );
+
+                    return (
                       <div
-                        key={seringa.id}
+                        key={`canal-${canalNum}`}
                         className="border-2 border-blue-200 rounded-lg p-4 bg-blue-50"
                       >
-                        {/* Cabeçalho da seringa */}
+                        {" "}
+                        {/* Cabeçalho do canal */}
                         <div className="flex justify-between items-center mb-4">
                           <h4 className="font-semibold text-blue-800 flex items-center">
                             <TestTube className="mr-2" />
-                            Seringa {seringaIndex + 1}
-                          </h4>
-                          <div className="flex items-center gap-2">
-                            {seringas.length > 1 && (
-                              <button
-                                type="button"
-                                className="flex items-center px-2 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-md border border-red-200 transition-colors"                                onClick={() =>
-                                  removerSeringaDiretamente(
-                                    seringa.id,
-                                    seringaIndex + 1
-                                  )
-                                }
-                                title={`Remover seringa ${seringaIndex + 1}`}
-                              >
-                                <Trash2 className="mr-1" size={14} />
-                                <span className="text-xs">Remover Seringa</span>
-                              </button>
+                            Canal {canalNum}
+                            {canalNum === 1 && (
+                              <span className="ml-2 text-xs px-2 py-1 bg-yellow-100 text-yellow-800 rounded-md">
+                                Canal Mestre
+                              </span>
                             )}
-                          </div>
-                        </div>
-
-                        {/* Configuração do volume nominal da seringa */}
-                        <div className="mb-4 p-3 bg-white rounded-md border border-blue-200">
-                          <label
-                            className="block text-sm font-medium mb-1"
-                            style={{ color: "rgb(75, 85, 99)" }}
-                          >
-                            Volume Nominal da Seringa
-                          </label>
-                          <div className="flex max-w-xs">
-                            <input
-                              type="text"
-                              value={seringa.volumeNominal}
-                              onChange={(e) =>
-                                atualizarSeringa(
-                                  seringa.id,
-                                  "volumeNominal",
-                                  formatNumberInput(e.target.value)
-                                )
-                              }
-                              placeholder="Volume nominal"
-                              className="flex-1 px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2"
-                              style={{
-                                "--tw-ring-color": "rgb(144, 199, 45)",
-                                color: "rgb(75, 85, 99)",
+                          </h4>
+                          {numeroCanais > 1 && (
+                            <button
+                              type="button"
+                              className="flex items-center px-2 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-md border border-red-200 transition-colors"
+                              onClick={() => {
+                                const primeiroPontoDoCanal =
+                                  pontosDoCanalAtual[0];
+                                if (primeiroPontoDoCanal) {
+                                  removerPontoDiretamente(
+                                    primeiroPontoDoCanal.id,
+                                    canalNum,
+                                    true
+                                  );
+                                }
                               }}
-                              required
-                            />
-                            <select
-                              value={seringa.unidade}
-                              onChange={(e) =>
-                                atualizarSeringa(
-                                  seringa.id,
-                                  "unidade",
-                                  e.target.value
-                                )
-                              }
-                              className="px-3 py-2 border border-l-0 border-gray-300 rounded-r-md focus:outline-none focus:ring-2"
-                              style={{
-                                "--tw-ring-color": "rgb(144, 199, 45)",
-                                color: "rgb(75, 85, 99)",
-                              }}
+                              title={`Remover canal ${canalNum} completo`}
                             >
-                              {" "}
-                              <option value="µL">µL</option>
-                              <option value="mL">mL</option>
-                            </select>
-                          </div>
+                              <Trash2 className="mr-1" size={14} />
+                              <span className="text-xs">Remover Canal</span>
+                            </button>
+                          )}
                         </div>
-
-                        {/* Container dos 3 pontos de calibração da seringa */}
+                        {/* Container dos 3 pontos do canal */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          {seringa.pontosCalibra.map((ponto, pontoIndex) => (
+                          {pontosDoCanalAtual.map((ponto, pontoIndex) => (
                             <div
                               key={ponto.id}
                               className="border border-gray-300 rounded-md p-3 bg-white relative"
                             >
                               <div className="mb-3">
-                                {" "}
                                 <div className="flex justify-between items-center mb-2">
                                   <span className="text-sm font-medium text-gray-600">
-                                    Ponto {pontoIndex + 1}
+                                    Ponto {ponto.pontoPosicao}
                                   </span>
+                                  <div className="px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs">
+                                    Canal {canalNum}
+                                  </div>
                                 </div>
+
                                 <label
                                   className="block text-sm font-medium mb-1"
                                   style={{ color: "rgb(75, 85, 99)" }}
@@ -2363,11 +2594,9 @@ const EmitirCertificadoPage = () => {
                                     type="text"
                                     value={ponto.volumeNominal}
                                     onChange={(e) =>
-                                      atualizarPontoSeringa(
-                                        seringa.id,
+                                      handleVolumeNominalChange(
                                         ponto.id,
-                                        "volumeNominal",
-                                        formatNumberInput(e.target.value)
+                                        e.target.value
                                       )
                                     }
                                     placeholder="Volume nominal"
@@ -2381,8 +2610,7 @@ const EmitirCertificadoPage = () => {
                                   <select
                                     value={ponto.unidade}
                                     onChange={(e) =>
-                                      atualizarPontoSeringa(
-                                        seringa.id,
+                                      atualizarPontoCalibracao(
                                         ponto.id,
                                         "unidade",
                                         e.target.value
@@ -2411,8 +2639,7 @@ const EmitirCertificadoPage = () => {
                                   <textarea
                                     value={ponto.valoresTexto || ""}
                                     onChange={(e) =>
-                                      handleValoresChangeSeringa(
-                                        seringa.id,
+                                      handleValoresChange(
                                         ponto.id,
                                         e.target.value
                                       )
@@ -2521,428 +2748,203 @@ const EmitirCertificadoPage = () => {
                               )}
                             </div>
                           ))}
-                        </div>
+                        </div>{" "}
                       </div>
-                    ))
-                  : formData.tipoInstrumento === "multicanal"
-                  ? // Layout para micropipeta multicanal - agrupado por canal
-                    Array.from({ length: numeroCanais }, (_, canalIndex) => {
-                      const canalNum = canalIndex + 1;
-                      const pontosDoCanalAtual = pontosCalibra.filter(
-                        (p) => p.canal === canalNum
-                      );
-
-                      return (
-                        <div
-                          key={`canal-${canalNum}`}
-                          className="border-2 border-blue-200 rounded-lg p-4 bg-blue-50"
-                        >
-                          {" "}
-                          {/* Cabeçalho do canal */}
-                          <div className="flex justify-between items-center mb-4">
-                            <h4 className="font-semibold text-blue-800 flex items-center">
-                              <TestTube className="mr-2" />
-                              Canal {canalNum}
-                              {canalNum === 1 && (
-                                <span className="ml-2 text-xs px-2 py-1 bg-yellow-100 text-yellow-800 rounded-md">
-                                  Canal Mestre
-                                </span>
-                              )}
-                            </h4>
-                            {numeroCanais > 1 && (
+                    );
+                  }) // Layout para micropipeta monocanal - layout em grid similar às multicanais
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {pontosCalibra.map((ponto, pontoIndex) => (
+                      <div
+                        key={ponto.id}
+                        className="border border-gray-300 rounded-md p-3 bg-white"
+                      >
+                        <div className="mb-3">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-sm font-medium text-gray-600">
+                              Ponto {pontoIndex + 1}
+                            </span>
+                            {pontosCalibra.length > 1 && (
                               <button
                                 type="button"
-                                className="flex items-center px-2 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-md border border-red-200 transition-colors"                                onClick={() => {
-                                  const primeiroPontoDoCanal =
-                                    pontosDoCanalAtual[0];
-                                  if (primeiroPontoDoCanal) {
-                                    removerPontoDiretamente(
-                                      primeiroPontoDoCanal.id,
-                                      canalNum,
-                                      true
-                                    );
-                                  }
-                                }}
-                                title={`Remover canal ${canalNum} completo`}
+                                className="flex items-center px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded-md border border-red-200 transition-colors text-xs"
+                                onClick={() =>
+                                  removerPontoDiretamente(
+                                    ponto.id,
+                                    pontoIndex + 1
+                                  )
+                                }
+                                title="Remover ponto de calibração"
                               >
-                                <Trash2 className="mr-1" size={14} />
-                                <span className="text-xs">Remover Canal</span>
+                                <Trash2 className="mr-1" size={12} />
+                                Remover
                               </button>
                             )}
                           </div>
-                          {/* Container dos 3 pontos do canal */}
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {pontosDoCanalAtual.map((ponto, pontoIndex) => (
-                              <div
-                                key={ponto.id}
-                                className="border border-gray-300 rounded-md p-3 bg-white relative"
-                              >
-                                <div className="mb-3">
-                                  <div className="flex justify-between items-center mb-2">
-                                    <span className="text-sm font-medium text-gray-600">
-                                      Ponto {ponto.pontoPosicao}
-                                    </span>
-                                    <div className="px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs">
-                                      Canal {canalNum}
-                                    </div>
-                                  </div>
 
-                                  <label
-                                    className="block text-sm font-medium mb-1"
-                                    style={{ color: "rgb(75, 85, 99)" }}
-                                  >
-                                    Volume Nominal
-                                  </label>
-                                  <div className="flex">
-                                    <input
-                                      type="text"
-                                      value={ponto.volumeNominal}
-                                      onChange={(e) =>
-                                        handleVolumeNominalChange(
-                                          ponto.id,
-                                          e.target.value
-                                        )
-                                      }
-                                      placeholder="Volume nominal"
-                                      className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2"
-                                      style={{
-                                        "--tw-ring-color": "rgb(144, 199, 45)",
-                                        color: "rgb(75, 85, 99)",
-                                      }}
-                                      required
-                                    />
-                                    <select
-                                      value={ponto.unidade}
-                                      onChange={(e) =>
-                                        atualizarPontoCalibracao(
-                                          ponto.id,
-                                          "unidade",
-                                          e.target.value
-                                        )
-                                      }
-                                      className="px-3 py-2 border border-l-0 border-gray-300 rounded-r-md focus:outline-none focus:ring-2"
-                                      style={{
-                                        "--tw-ring-color": "rgb(144, 199, 45)",
-                                        color: "rgb(75, 85, 99)",
-                                      }}
-                                    >
-                                      <option value="µL">µL</option>
-                                      <option value="mL">mL</option>
-                                    </select>
-                                  </div>
+                          <label
+                            className="block text-sm font-medium mb-1"
+                            style={{ color: "rgb(75, 85, 99)" }}
+                          >
+                            Volume Nominal
+                          </label>
+                          <div className="flex">
+                            <input
+                              type="text"
+                              value={ponto.volumeNominal}
+                              onChange={(e) =>
+                                handleVolumeNominalChange(
+                                  ponto.id,
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Volume nominal"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2"
+                              style={{
+                                "--tw-ring-color": "rgb(144, 199, 45)",
+                                color: "rgb(75, 85, 99)",
+                              }}
+                              required
+                            />
+                            <select
+                              value={ponto.unidade}
+                              onChange={(e) =>
+                                atualizarPontoCalibracao(
+                                  ponto.id,
+                                  "unidade",
+                                  e.target.value
+                                )
+                              }
+                              className="px-3 py-2 border border-l-0 border-gray-300 rounded-r-md focus:outline-none focus:ring-2"
+                              style={{
+                                "--tw-ring-color": "rgb(144, 199, 45)",
+                                color: "rgb(75, 85, 99)",
+                              }}
+                            >
+                              <option value="µL">µL</option>
+                              <option value="mL">mL</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div className="mb-3">
+                          <label
+                            className="block text-sm font-medium mb-1"
+                            style={{ color: "rgb(75, 85, 99)" }}
+                          >
+                            Medições (mg)
+                          </label>
+                          <div className="space-y-2">
+                            <textarea
+                              value={ponto.valoresTexto || ""}
+                              onChange={(e) =>
+                                handleValoresChange(ponto.id, e.target.value)
+                              }
+                              placeholder="Cole os valores separados por vírgula"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 resize-none"
+                              style={{
+                                "--tw-ring-color": "rgb(144, 199, 45)",
+                                color: "rgb(75, 85, 99)",
+                              }}
+                              rows="2"
+                            />
+
+                            {/* Mostrar os valores processados */}
+                            {ponto.medicoes.some((m) => m !== "") && (
+                              <div className="mt-2">
+                                <div className="text-xs text-gray-500 mb-1">
+                                  Valores detectados:
                                 </div>
-
-                                <div className="mb-3">
-                                  <label
-                                    className="block text-sm font-medium mb-1"
-                                    style={{ color: "rgb(75, 85, 99)" }}
-                                  >
-                                    Medições (mg)
-                                  </label>
-                                  <div className="space-y-2">
-                                    <textarea
-                                      value={ponto.valoresTexto || ""}
-                                      onChange={(e) =>
-                                        handleValoresChange(
-                                          ponto.id,
-                                          e.target.value
-                                        )
-                                      }
-                                      placeholder="Cole os valores separados por vírgula"
-                                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 resize-none"
-                                      style={{
-                                        "--tw-ring-color": "rgb(144, 199, 45)",
-                                        color: "rgb(75, 85, 99)",
-                                      }}
-                                      rows="2"
-                                    />
-
-                                    {/* Mostrar os valores processados */}
-                                    {ponto.medicoes.some((m) => m !== "") && (
-                                      <div className="mt-2">
-                                        <div className="text-xs text-gray-500 mb-1">
-                                          Valores detectados:
-                                        </div>
-                                        <div className="grid grid-cols-3 gap-1">
-                                          {ponto.medicoes
-                                            .slice(0, 6)
-                                            .map((medicao, index) => (
-                                              <div
-                                                key={index}
-                                                className={`px-1 py-1 text-xs rounded text-center ${
-                                                  medicao !== ""
-                                                    ? "bg-green-100 text-green-800 border border-green-200"
-                                                    : "bg-gray-100 text-gray-400 border border-gray-200"
-                                                }`}
-                                              >
-                                                {medicao !== ""
-                                                  ? medicao
-                                                  : `M${index + 1}`}
-                                              </div>
-                                            ))}
-                                        </div>
+                                <div className="grid grid-cols-3 gap-1">
+                                  {ponto.medicoes
+                                    .slice(0, 6)
+                                    .map((medicao, index) => (
+                                      <div
+                                        key={index}
+                                        className={`px-1 py-1 text-xs rounded text-center ${
+                                          medicao !== ""
+                                            ? "bg-green-100 text-green-800 border border-green-200"
+                                            : "bg-gray-100 text-gray-400 border border-gray-200"
+                                        }`}
+                                      >
+                                        {medicao !== ""
+                                          ? medicao
+                                          : `M${index + 1}`}
                                       </div>
-                                    )}
-                                  </div>
+                                    ))}
                                 </div>
-
-                                {/* Resultados dos cálculos */}
-                                {ponto.media !== null && (
-                                  <div className="bg-gray-50 p-2 rounded-md">
-                                    <h5 className="font-medium mb-2 text-xs text-gray-700">
-                                      Resultados
-                                    </h5>
-                                    <div className="space-y-2 text-xs">
-                                      <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
-                                        <div className="text-xs text-gray-500 mb-1">
-                                          Mean Volume
-                                        </div>
-                                        <div className="flex justify-between">
-                                          <span className="font-medium">
-                                            {ponto.mediaMassa?.toFixed(2)} mg
-                                          </span>
-                                          <span className="text-green-600 font-medium">
-                                            {ponto.media?.toFixed(2)} µL
-                                          </span>
-                                        </div>
-                                      </div>
-                                      <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
-                                        <div className="text-xs text-gray-500 mb-1">
-                                          Accuracy
-                                        </div>
-                                        <div className="flex justify-between">
-                                          <span className="font-medium">
-                                            {ponto.inexatidao?.toFixed(2)} µL
-                                          </span>
-                                          <span
-                                            className={
-                                              Math.abs(
-                                                ponto.inexatidaoPercentual
-                                              ) > 5
-                                                ? "text-red-600 font-medium"
-                                                : "text-green-600 font-medium"
-                                            }
-                                          >
-                                            {ponto.inexatidaoPercentual?.toFixed(
-                                              2
-                                            )}
-                                            %
-                                          </span>
-                                        </div>
-                                      </div>
-                                      <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
-                                        <div className="text-xs text-gray-500 mb-1">
-                                          Precision
-                                        </div>
-                                        <div className="flex justify-between">
-                                          <span className="font-medium">
-                                            SD: {ponto.desvioPadrao?.toFixed(2)}
-                                          </span>
-                                          <span className="text-blue-600 font-medium">
-                                            CV:{" "}
-                                            {ponto.coeficienteVariacao?.toFixed(
-                                              2
-                                            )}
-                                            %
-                                          </span>
-                                        </div>
-                                      </div>
-                                    </div>
+                                {/* Mostrar mais valores se houver */}
+                                {ponto.medicoes.filter((m) => m !== "").length >
+                                  6 && (
+                                  <div className="mt-1 text-xs text-gray-500 text-center">
+                                    +
+                                    {ponto.medicoes.filter((m) => m !== "")
+                                      .length - 6}{" "}
+                                    valores adicionais
                                   </div>
                                 )}
                               </div>
-                            ))}
-                          </div>                        </div>
-                      );
-                    })                  : // Layout para micropipeta monocanal - layout em grid similar às multicanais
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {pontosCalibra.map((ponto, pontoIndex) => (
-                        <div
-                          key={ponto.id}
-                          className="border border-gray-300 rounded-md p-3 bg-white"
-                        >
-                          <div className="mb-3">
-                            <div className="flex justify-between items-center mb-2">
-                              <span className="text-sm font-medium text-gray-600">
-                                Ponto {pontoIndex + 1}
-                              </span>
-                              {pontosCalibra.length > 1 && (
-                                <button
-                                  type="button"
-                                  className="flex items-center px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded-md border border-red-200 transition-colors text-xs"                                  onClick={() =>
-                                    removerPontoDiretamente(
-                                      ponto.id,
-                                      pontoIndex + 1
-                                    )
-                                  }
-                                  title="Remover ponto de calibração"
-                                >
-                                  <Trash2 className="mr-1" size={12} />
-                                  Remover
-                                </button>
-                              )}
-                            </div>
-
-                            <label
-                              className="block text-sm font-medium mb-1"
-                              style={{ color: "rgb(75, 85, 99)" }}
-                            >
-                              Volume Nominal
-                            </label>
-                            <div className="flex">
-                              <input
-                                type="text"
-                                value={ponto.volumeNominal}
-                                onChange={(e) =>
-                                  handleVolumeNominalChange(
-                                    ponto.id,
-                                    e.target.value
-                                  )
-                                }
-                                placeholder="Volume nominal"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2"
-                                style={{
-                                  "--tw-ring-color": "rgb(144, 199, 45)",
-                                  color: "rgb(75, 85, 99)",
-                                }}
-                                required
-                              />
-                              <select
-                                value={ponto.unidade}
-                                onChange={(e) =>
-                                  atualizarPontoCalibracao(
-                                    ponto.id,
-                                    "unidade",
-                                    e.target.value
-                                  )
-                                }
-                                className="px-3 py-2 border border-l-0 border-gray-300 rounded-r-md focus:outline-none focus:ring-2"
-                                style={{
-                                  "--tw-ring-color": "rgb(144, 199, 45)",
-                                  color: "rgb(75, 85, 99)",
-                                }}
-                              >
-                                <option value="µL">µL</option>
-                                <option value="mL">mL</option>
-                              </select>
-                            </div>
+                            )}
                           </div>
-
-                          <div className="mb-3">
-                            <label
-                              className="block text-sm font-medium mb-1"
-                              style={{ color: "rgb(75, 85, 99)" }}
-                            >
-                              Medições (mg)
-                            </label>
-                            <div className="space-y-2">
-                              <textarea
-                                value={ponto.valoresTexto || ""}
-                                onChange={(e) =>
-                                  handleValoresChange(ponto.id, e.target.value)
-                                }
-                                placeholder="Cole os valores separados por vírgula"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 resize-none"
-                                style={{
-                                  "--tw-ring-color": "rgb(144, 199, 45)",
-                                  color: "rgb(75, 85, 99)",
-                                }}
-                                rows="2"
-                              />
-
-                              {/* Mostrar os valores processados */}
-                              {ponto.medicoes.some((m) => m !== "") && (
-                                <div className="mt-2">
-                                  <div className="text-xs text-gray-500 mb-1">
-                                    Valores detectados:
-                                  </div>
-                                  <div className="grid grid-cols-3 gap-1">
-                                    {ponto.medicoes
-                                      .slice(0, 6)
-                                      .map((medicao, index) => (
-                                        <div
-                                          key={index}
-                                          className={`px-1 py-1 text-xs rounded text-center ${
-                                            medicao !== ""
-                                              ? "bg-green-100 text-green-800 border border-green-200"
-                                              : "bg-gray-100 text-gray-400 border border-gray-200"
-                                          }`}
-                                        >
-                                          {medicao !== ""
-                                            ? medicao
-                                            : `M${index + 1}`}
-                                        </div>
-                                      ))}
-                                  </div>
-                                  {/* Mostrar mais valores se houver */}
-                                  {ponto.medicoes.filter(m => m !== "").length > 6 && (
-                                    <div className="mt-1 text-xs text-gray-500 text-center">
-                                      +{ponto.medicoes.filter(m => m !== "").length - 6} valores adicionais
-                                    </div>
-                                  )}
+                        </div>
+                        {/* Resultados dos cálculos */}
+                        {ponto.media !== null && (
+                          <div className="bg-gray-50 p-2 rounded-md">
+                            <h5 className="font-medium mb-2 text-xs text-gray-700">
+                              Resultados
+                            </h5>
+                            <div className="space-y-2 text-xs">
+                              <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
+                                <div className="text-xs text-gray-500 mb-1">
+                                  Mean Volume
                                 </div>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Resultados dos cálculos */}
-                          {ponto.media !== null && (
-                            <div className="bg-gray-50 p-2 rounded-md">
-                              <h5 className="font-medium mb-2 text-xs text-gray-700">
-                                Resultados
-                              </h5>
-                              <div className="space-y-2 text-xs">
-                                <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
-                                  <div className="text-xs text-gray-500 mb-1">
-                                    Mean Volume
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="font-medium">
-                                      {ponto.mediaMassa?.toFixed(2)} mg
-                                    </span>
-                                    <span className="text-green-600 font-medium">
-                                      {ponto.media?.toFixed(2)} µL
-                                    </span>
-                                  </div>
+                                <div className="flex justify-between">
+                                  <span className="font-medium">
+                                    {ponto.mediaMassa?.toFixed(2)} mg
+                                  </span>
+                                  <span className="text-green-600 font-medium">
+                                    {ponto.media?.toFixed(2)} µL
+                                  </span>
                                 </div>
-                                <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
-                                  <div className="text-xs text-gray-500 mb-1">
-                                    Accuracy
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="font-medium">
-                                      {ponto.inexatidao?.toFixed(2)} µL
-                                    </span>
-                                    <span
-                                      className={
-                                        Math.abs(ponto.inexatidaoPercentual) > 5
-                                          ? "text-red-600 font-medium"
-                                          : "text-green-600 font-medium"
-                                      }
-                                    >
-                                      {ponto.inexatidaoPercentual?.toFixed(2)}%
-                                    </span>
-                                  </div>
+                              </div>
+                              <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
+                                <div className="text-xs text-gray-500 mb-1">
+                                  Accuracy
                                 </div>
-                                <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
-                                  <div className="text-xs text-gray-500 mb-1">
-                                    Precision
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="font-medium">
-                                      SD: {ponto.desvioPadrao?.toFixed(2)}
-                                    </span>
-                                    <span className="text-blue-600 font-medium">
-                                      CV: {ponto.coeficienteVariacao?.toFixed(2)}%
-                                    </span>
-                                  </div>
+                                <div className="flex justify-between">
+                                  <span className="font-medium">
+                                    {ponto.inexatidao?.toFixed(2)} µL
+                                  </span>
+                                  <span
+                                    className={
+                                      Math.abs(ponto.inexatidaoPercentual) > 5
+                                        ? "text-red-600 font-medium"
+                                        : "text-green-600 font-medium"
+                                    }
+                                  >
+                                    {ponto.inexatidaoPercentual?.toFixed(2)}%
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="p-2 bg-white rounded shadow-sm border border-gray-200">
+                                <div className="text-xs text-gray-500 mb-1">
+                                  Precision
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="font-medium">
+                                    SD: {ponto.desvioPadrao?.toFixed(2)}
+                                  </span>
+                                  <span className="text-blue-600 font-medium">
+                                    CV: {ponto.coeficienteVariacao?.toFixed(2)}%
+                                  </span>
                                 </div>
                               </div>
                             </div>
-                          )}                        </div>
-                      ))}
-                    </div>
-                }
+                          </div>
+                        )}{" "}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>{" "}
             <div className="flex justify-end">
@@ -2958,7 +2960,8 @@ const EmitirCertificadoPage = () => {
                 }
                 onMouseLeave={(e) =>
                   (e.target.style.backgroundColor = "rgb(144, 199, 45)")
-                }              >
+                }
+              >
                 Gerar Certificado
               </button>
             </div>
