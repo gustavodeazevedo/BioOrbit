@@ -781,25 +781,71 @@ export class PDFService {    /**
 
     /**
      * Formata o endereço completo do cliente
+     */    /**
+     * Formata o endereço completo do cliente para exibição no certificado
+     * Padrão: "Logradouro, número/complemento - Bairro - Cidade - Estado - CEP 00000-000"
+     * Exemplo: "Avenida Thomas Edison, 294/296 - Barra Funda - São Paulo - SP - CEP 01140-000"
      */
     static formatarEnderecoCompleto(cliente) {
         if (!cliente) return 'N/A';
 
-        const endereco = [];
-
         // Verificar se o endereço está em cliente.endereco ou diretamente em cliente
         const enderecoData = cliente.endereco || cliente;
+        
+        if (!enderecoData) return 'Endereço não informado';
 
-        if (enderecoData.logradouro) endereco.push(enderecoData.logradouro);
-        if (enderecoData.numero) endereco.push(enderecoData.numero);
-        if (enderecoData.complemento) endereco.push(enderecoData.complemento);
-        if (enderecoData.bairro) endereco.push(enderecoData.bairro);
-        if (enderecoData.cidade) endereco.push(enderecoData.cidade);
-        if (enderecoData.estado) endereco.push(enderecoData.estado);
-        if (enderecoData.cep) endereco.push(`CEP: ${enderecoData.cep}`);
+        // Construir endereço seguindo o padrão: "Logradouro, número/complemento - Bairro - Cidade - Estado - CEP"
+        let enderecoFormatado = '';
 
-        return endereco.length > 0 ? endereco.join(', ') : 'Endereço não informado';
-    }    /**
+        // 1. Logradouro (rua, avenida, etc.)
+        const logradouro = enderecoData.logradouro || enderecoData.rua;
+        if (logradouro) {
+            enderecoFormatado += logradouro;
+        }
+
+        // 2. Número e complemento juntos
+        if (enderecoData.numero) {
+            if (enderecoFormatado) enderecoFormatado += ', ';
+            enderecoFormatado += enderecoData.numero;
+            
+            // Adicionar complemento junto com o número usando "/"
+            if (enderecoData.complemento) {
+                enderecoFormatado += `/${enderecoData.complemento}`;
+            }
+        }
+
+        // 3. Bairro
+        if (enderecoData.bairro) {
+            if (enderecoFormatado) enderecoFormatado += ' - ';
+            enderecoFormatado += enderecoData.bairro;
+        }
+
+        // 4. Cidade
+        if (enderecoData.cidade) {
+            if (enderecoFormatado) enderecoFormatado += ' - ';
+            enderecoFormatado += enderecoData.cidade;
+        }
+
+        // 5. Estado
+        if (enderecoData.estado) {
+            if (enderecoFormatado) enderecoFormatado += ' - ';
+            enderecoFormatado += enderecoData.estado.toUpperCase();
+        }
+
+        // 6. CEP
+        if (enderecoData.cep) {
+            if (enderecoFormatado) enderecoFormatado += ' - ';
+            // Formatar CEP com padrão brasileiro: CEP 00000-000
+            const cepFormatado = enderecoData.cep.replace(/\D/g, ''); // Remove caracteres não numéricos
+            if (cepFormatado.length === 8) {
+                enderecoFormatado += `CEP ${cepFormatado.slice(0, 5)}-${cepFormatado.slice(5)}`;
+            } else {
+                enderecoFormatado += `CEP ${enderecoData.cep}`;
+            }
+        }
+
+        return enderecoFormatado || 'Endereço não informado';
+    }/**
      * Formata números no padrão brasileiro (vírgula como separador decimal)
      */
     static formatarNumero(numero) {

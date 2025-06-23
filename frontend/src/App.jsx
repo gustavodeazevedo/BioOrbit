@@ -26,7 +26,6 @@ function App() {
           <main className="container mx-auto px-4 py-8">
             <Routes>
               <Route path="/" element={<HomeRedirect />} />
-
               {/* Rotas públicas */}
               <Route path="/login" element={<LoginPage />} />
               <Route path="/registro" element={<RegisterPage />} />
@@ -35,11 +34,9 @@ function App() {
                 path="/redefinir-senha/:token"
                 element={<RedefinirSenhaPage />}
               />
-
               {/* Rotas protegidas */}
               <Route element={<ProtectedRoute />}>
                 <Route path="/dashboard" element={<DashboardPage />} />
-
                 {/* Rotas de clientes */}
                 <Route path="/clientes" element={<ClientesPage />} />
                 <Route path="/clientes/novo" element={<ClienteFormPage />} />
@@ -47,24 +44,22 @@ function App() {
                   path="/clientes/editar/:id"
                   element={<ClienteFormPage />}
                 />
-
                 {/* Rotas de certificados */}
                 <Route
                   path="/selecionar-cliente"
                   element={<SelecionarClientePage />}
-                />
+                />{" "}
                 <Route
                   path="/emitir-certificado/:id"
                   element={<EmitirCertificadoPage />}
                 />
-
                 {/* Outras rotas protegidas serão adicionadas aqui */}
               </Route>
-
               {/* Rotas protegidas apenas para admin */}
               <Route element={<ProtectedRoute adminOnly={true} />}>
                 {/* Outras rotas de admin serão adicionadas aqui */}
-              </Route>            </Routes>
+              </Route>{" "}
+            </Routes>
           </main>
         </div>
       </Router>

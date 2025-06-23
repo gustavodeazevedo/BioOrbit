@@ -149,7 +149,8 @@ const ClienteFormPage = () => {
     } finally {
       setSaving(false);
     }
-  };  if (loading) {
+  };
+  if (loading) {
     return (
       <div
         className="min-h-screen w-full flex items-center justify-center p-6"
@@ -189,7 +190,8 @@ const ClienteFormPage = () => {
         </div>
       </div>
     );
-  }  return (
+  }
+  return (
     <div
       className="min-h-screen w-full flex items-center justify-center p-6"
       style={{
@@ -201,7 +203,9 @@ const ClienteFormPage = () => {
         bottom: 0,
         overflow: "auto",
       }}
-    >      <div
+    >
+      {" "}
+      <div
         className="w-full max-w-4xl mx-auto"
         style={{
           background: "rgba(255, 255, 255, 0.95)",
@@ -241,8 +245,9 @@ const ClienteFormPage = () => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {" "}
           {/* Informações básicas */}{" "}
-          <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+          <div className="p-4 rounded-md border border-gray-200">
             {" "}
             <h2
               className="text-lg font-semibold flex items-center mb-3"
@@ -256,16 +261,31 @@ const ClienteFormPage = () => {
                 style={{ color: "rgb(75, 85, 99)" }}
               >
                 Nome da Empresa*
-              </label>
+              </label>{" "}
               <input
                 type="text"
                 name="nome"
                 value={formData.nome}
                 onChange={handleChange}
-                className={`w-full px-3 py-2 border rounded-md ${
-                  validationErrors.nome ? "border-red-500" : "border-gray-300"
-                } focus:outline-none focus:ring-2`}
-                style={{ "--tw-ring-color": "rgb(144, 199, 45)" }}
+                className={`w-full px-3 py-2 border rounded-md transition-colors ${
+                  validationErrors.nome
+                    ? "border-red-500"
+                    : "border-gray-300 focus:border-green-500"
+                } focus:outline-none`}
+                style={{
+                  borderColor: validationErrors.nome ? "#ef4444" : "#d1d5db",
+                  color: "rgb(75, 85, 99)",
+                }}
+                onFocus={(e) => {
+                  if (!validationErrors.nome) {
+                    e.target.style.borderColor = "rgb(144, 199, 45)";
+                  }
+                }}
+                onBlur={(e) => {
+                  if (!validationErrors.nome) {
+                    e.target.style.borderColor = "#d1d5db";
+                  }
+                }}
                 placeholder="Nome da empresa"
               />
               {validationErrors.nome && (
@@ -274,9 +294,9 @@ const ClienteFormPage = () => {
                 </p>
               )}
             </div>
-          </div>
+          </div>{" "}
           {/* Endereço */}
-          <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+          <div className="p-4 rounded-md border border-gray-200">
             {" "}
             <h2
               className="text-lg font-semibold flex items-center mb-3"
@@ -291,20 +311,32 @@ const ClienteFormPage = () => {
                   style={{ color: "rgb(75, 85, 99)" }}
                 >
                   Rua*
-                </label>
+                </label>{" "}
                 <input
                   type="text"
                   name="endereco.rua"
                   value={formData.endereco.rua}
                   onChange={handleChange}
-                  className={`w-full px-3 py-2 border rounded-md ${
+                  className={`w-full px-3 py-2 border rounded-md transition-colors ${
                     validationErrors["endereco.rua"]
                       ? "border-red-500"
-                      : "border-gray-300"
-                  } focus:outline-none focus:ring-2`}
+                      : "border-gray-300 focus:border-green-500"
+                  } focus:outline-none`}
                   style={{
-                    "--tw-ring-color": "rgb(144, 199, 45)",
+                    borderColor: validationErrors["endereco.rua"]
+                      ? "#ef4444"
+                      : "#d1d5db",
                     color: "rgb(75, 85, 99)",
+                  }}
+                  onFocus={(e) => {
+                    if (!validationErrors["endereco.rua"]) {
+                      e.target.style.borderColor = "rgb(144, 199, 45)";
+                    }
+                  }}
+                  onBlur={(e) => {
+                    if (!validationErrors["endereco.rua"]) {
+                      e.target.style.borderColor = "#d1d5db";
+                    }
                   }}
                   placeholder="Nome da rua"
                 />
@@ -321,20 +353,32 @@ const ClienteFormPage = () => {
                     style={{ color: "rgb(75, 85, 99)" }}
                   >
                     Número*
-                  </label>
+                  </label>{" "}
                   <input
                     type="text"
                     name="endereco.numero"
                     value={formData.endereco.numero}
                     onChange={handleChange}
-                    className={`w-full px-3 py-2 border rounded-md ${
+                    className={`w-full px-3 py-2 border rounded-md transition-colors ${
                       validationErrors["endereco.numero"]
                         ? "border-red-500"
-                        : "border-gray-300"
-                    } focus:outline-none focus:ring-2`}
+                        : "border-gray-300 focus:border-green-500"
+                    } focus:outline-none`}
                     style={{
-                      "--tw-ring-color": "rgb(144, 199, 45)",
+                      borderColor: validationErrors["endereco.numero"]
+                        ? "#ef4444"
+                        : "#d1d5db",
                       color: "rgb(75, 85, 99)",
+                    }}
+                    onFocus={(e) => {
+                      if (!validationErrors["endereco.numero"]) {
+                        e.target.style.borderColor = "rgb(144, 199, 45)";
+                      }
+                    }}
+                    onBlur={(e) => {
+                      if (!validationErrors["endereco.numero"]) {
+                        e.target.style.borderColor = "#d1d5db";
+                      }
                     }}
                     placeholder="123"
                   />
@@ -351,16 +395,22 @@ const ClienteFormPage = () => {
                     style={{ color: "rgb(75, 85, 99)" }}
                   >
                     Complemento
-                  </label>
+                  </label>{" "}
                   <input
                     type="text"
                     name="endereco.complemento"
                     value={formData.endereco.complemento}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md transition-colors focus:border-green-500 focus:outline-none"
                     style={{
-                      "--tw-ring-color": "rgb(144, 199, 45)",
+                      borderColor: "#d1d5db",
                       color: "rgb(75, 85, 99)",
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = "rgb(144, 199, 45)";
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = "#d1d5db";
                     }}
                     placeholder="Sala 101"
                   />
@@ -372,20 +422,32 @@ const ClienteFormPage = () => {
                   style={{ color: "rgb(75, 85, 99)" }}
                 >
                   Bairro*
-                </label>
+                </label>{" "}
                 <input
                   type="text"
                   name="endereco.bairro"
                   value={formData.endereco.bairro}
                   onChange={handleChange}
-                  className={`w-full px-3 py-2 border rounded-md ${
+                  className={`w-full px-3 py-2 border rounded-md transition-colors ${
                     validationErrors["endereco.bairro"]
                       ? "border-red-500"
-                      : "border-gray-300"
-                  } focus:outline-none focus:ring-2`}
+                      : "border-gray-300 focus:border-green-500"
+                  } focus:outline-none`}
                   style={{
-                    "--tw-ring-color": "rgb(144, 199, 45)",
+                    borderColor: validationErrors["endereco.bairro"]
+                      ? "#ef4444"
+                      : "#d1d5db",
                     color: "rgb(75, 85, 99)",
+                  }}
+                  onFocus={(e) => {
+                    if (!validationErrors["endereco.bairro"]) {
+                      e.target.style.borderColor = "rgb(144, 199, 45)";
+                    }
+                  }}
+                  onBlur={(e) => {
+                    if (!validationErrors["endereco.bairro"]) {
+                      e.target.style.borderColor = "#d1d5db";
+                    }
                   }}
                   placeholder="Nome do bairro"
                 />
@@ -401,20 +463,32 @@ const ClienteFormPage = () => {
                   style={{ color: "rgb(75, 85, 99)" }}
                 >
                   CEP*
-                </label>
+                </label>{" "}
                 <InputMask
                   mask="99999-999"
                   name="endereco.cep"
                   value={formData.endereco.cep}
                   onChange={handleChange}
-                  className={`w-full px-3 py-2 border rounded-md ${
+                  className={`w-full px-3 py-2 border rounded-md transition-colors ${
                     validationErrors["endereco.cep"]
                       ? "border-red-500"
-                      : "border-gray-300"
-                  } focus:outline-none focus:ring-2`}
+                      : "border-gray-300 focus:border-green-500"
+                  } focus:outline-none`}
                   style={{
-                    "--tw-ring-color": "rgb(144, 199, 45)",
+                    borderColor: validationErrors["endereco.cep"]
+                      ? "#ef4444"
+                      : "#d1d5db",
                     color: "rgb(75, 85, 99)",
+                  }}
+                  onFocus={(e) => {
+                    if (!validationErrors["endereco.cep"]) {
+                      e.target.style.borderColor = "rgb(144, 199, 45)";
+                    }
+                  }}
+                  onBlur={(e) => {
+                    if (!validationErrors["endereco.cep"]) {
+                      e.target.style.borderColor = "#d1d5db";
+                    }
                   }}
                   placeholder="00000-000"
                 />
@@ -430,20 +504,32 @@ const ClienteFormPage = () => {
                   style={{ color: "rgb(75, 85, 99)" }}
                 >
                   Cidade*
-                </label>
+                </label>{" "}
                 <input
                   type="text"
                   name="endereco.cidade"
                   value={formData.endereco.cidade}
                   onChange={handleChange}
-                  className={`w-full px-3 py-2 border rounded-md ${
+                  className={`w-full px-3 py-2 border rounded-md transition-colors ${
                     validationErrors["endereco.cidade"]
                       ? "border-red-500"
-                      : "border-gray-300"
-                  } focus:outline-none focus:ring-2`}
+                      : "border-gray-300 focus:border-green-500"
+                  } focus:outline-none`}
                   style={{
-                    "--tw-ring-color": "rgb(144, 199, 45)",
+                    borderColor: validationErrors["endereco.cidade"]
+                      ? "#ef4444"
+                      : "#d1d5db",
                     color: "rgb(75, 85, 99)",
+                  }}
+                  onFocus={(e) => {
+                    if (!validationErrors["endereco.cidade"]) {
+                      e.target.style.borderColor = "rgb(144, 199, 45)";
+                    }
+                  }}
+                  onBlur={(e) => {
+                    if (!validationErrors["endereco.cidade"]) {
+                      e.target.style.borderColor = "#d1d5db";
+                    }
                   }}
                   placeholder="Nome da cidade"
                 />
@@ -459,19 +545,31 @@ const ClienteFormPage = () => {
                   style={{ color: "rgb(75, 85, 99)" }}
                 >
                   Estado*
-                </label>
+                </label>{" "}
                 <select
                   name="endereco.estado"
                   value={formData.endereco.estado}
                   onChange={handleChange}
-                  className={`w-full px-3 py-2 border rounded-md ${
+                  className={`w-full px-3 py-2 border rounded-md transition-colors ${
                     validationErrors["endereco.estado"]
                       ? "border-red-500"
-                      : "border-gray-300"
-                  } focus:outline-none focus:ring-2`}
+                      : "border-gray-300 focus:border-green-500"
+                  } focus:outline-none`}
                   style={{
-                    "--tw-ring-color": "rgb(144, 199, 45)",
+                    borderColor: validationErrors["endereco.estado"]
+                      ? "#ef4444"
+                      : "#d1d5db",
                     color: "rgb(75, 85, 99)",
+                  }}
+                  onFocus={(e) => {
+                    if (!validationErrors["endereco.estado"]) {
+                      e.target.style.borderColor = "rgb(144, 199, 45)";
+                    }
+                  }}
+                  onBlur={(e) => {
+                    if (!validationErrors["endereco.estado"]) {
+                      e.target.style.borderColor = "#d1d5db";
+                    }
                   }}
                 >
                   <option value="">Selecione um estado</option>

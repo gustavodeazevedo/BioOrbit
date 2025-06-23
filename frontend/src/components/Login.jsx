@@ -1,4 +1,4 @@
-import "./Login.css";
+import "../styles/Login.css";
 import React, { useState } from "react";
 import Logosvg from "../images/GreenListLogoSVG.svg";
 import User from "../images/user.svg";
