@@ -104,7 +104,7 @@ const DashboardPage = () => {
                 onClick={() => navigate("/selecionar-cliente")}
               >
                 Emitir Certificado
-              </button>
+              </button>{" "}
             </div>
           </div>
           {/* Seção de Administração - visível apenas para admins, mas sem o botão de token */}

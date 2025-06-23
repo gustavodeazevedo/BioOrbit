@@ -246,7 +246,7 @@
 .form-title::before {
   content: "";
   position: absolute;
-  bottom: -2px;
+  bottom: -5.5px;
   left: 50%;
   transform: translateX(-50%);
   width: 60px;

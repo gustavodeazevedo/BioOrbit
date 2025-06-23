@@ -43,18 +43,17 @@ const RecuperarSenhaPage = () => {
       // O erro global já é tratado pelo contexto de autenticação
     }
   };
-
   return (
     <div className="login-container">
-      <div className="login-logo">
-        <img
-          src="/images/logo-bio-research.png"
-          alt="Bio Research do Brasil Logo"
-          className="logo-image"
-        />
-      </div>
-
       <div className="login-form">
+        <div className="login-logo">
+          <img
+            src="/images/logo-bio-research.png"
+            alt="Bio Research do Brasil Logo"
+            className="logo-image"
+          />
+        </div>
+
         <h2 className="form-title">Recuperação de Senha</h2>
 
         {error && <div className="error-message">{error}</div>}
