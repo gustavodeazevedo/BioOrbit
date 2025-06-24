@@ -25,15 +25,10 @@ const ClienteSchema = new mongoose.Schema({
             type: String,
             trim: true,
             required: [true, 'Rua é obrigatória']
-        },
-        numero: {
+        }, numero: {
             type: String,
             trim: true,
             required: [true, 'Número é obrigatório']
-        },
-        complemento: {
-            type: String,
-            trim: true
         },
         bairro: {
             type: String,
@@ -74,7 +69,8 @@ const ClienteSchema = new mongoose.Schema({
             trim: true,
             lowercase: true,
             match: [/^\S+@\S+\.\S+$/, 'Por favor, insira um email válido para o contato']
-        }    },
+        }
+    },
     dataCadastro: {
         type: Date,
         default: Date.now

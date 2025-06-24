@@ -13,7 +13,6 @@ const initialState = {
   endereco: {
     rua: "",
     numero: "",
-    complemento: "",
     bairro: "",
     cidade: "",
     estado: "",
@@ -112,15 +111,12 @@ const ClienteFormPage = () => {
     }
 
     try {
-      setSaving(true);
-
-      // Certificando que o objeto endereco está completo
+      setSaving(true); // Certificando que o objeto endereco está completo
       const dadosParaEnvio = {
         ...formData,
         endereco: {
           rua: formData.endereco?.rua || "",
           numero: formData.endereco?.numero || "",
-          complemento: formData.endereco?.complemento || "",
           bairro: formData.endereco?.bairro || "",
           cidade: formData.endereco?.cidade || "",
           estado: formData.endereco?.estado || "",
@@ -344,77 +340,48 @@ const ClienteFormPage = () => {
                   <p className="text-red-500 text-xs mt-1">
                     {validationErrors["endereco.rua"]}
                   </p>
-                )}
+                )}{" "}
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-1"
-                    style={{ color: "rgb(75, 85, 99)" }}
-                  >
-                    Número*
-                  </label>{" "}
-                  <input
-                    type="text"
-                    name="endereco.numero"
-                    value={formData.endereco.numero}
-                    onChange={handleChange}
-                    className={`w-full px-3 py-2 border rounded-md transition-colors ${
-                      validationErrors["endereco.numero"]
-                        ? "border-red-500"
-                        : "border-gray-300 focus:border-green-500"
-                    } focus:outline-none`}
-                    style={{
-                      borderColor: validationErrors["endereco.numero"]
-                        ? "#ef4444"
-                        : "#d1d5db",
-                      color: "rgb(75, 85, 99)",
-                    }}
-                    onFocus={(e) => {
-                      if (!validationErrors["endereco.numero"]) {
-                        e.target.style.borderColor = "rgb(144, 199, 45)";
-                      }
-                    }}
-                    onBlur={(e) => {
-                      if (!validationErrors["endereco.numero"]) {
-                        e.target.style.borderColor = "#d1d5db";
-                      }
-                    }}
-                    placeholder="123"
-                  />
-                  {validationErrors["endereco.numero"] && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {validationErrors["endereco.numero"]}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-1"
-                    style={{ color: "rgb(75, 85, 99)" }}
-                  >
-                    Complemento
-                  </label>{" "}
-                  <input
-                    type="text"
-                    name="endereco.complemento"
-                    value={formData.endereco.complemento}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md transition-colors focus:border-green-500 focus:outline-none"
-                    style={{
-                      borderColor: "#d1d5db",
-                      color: "rgb(75, 85, 99)",
-                    }}
-                    onFocus={(e) => {
+              <div>
+                <label
+                  className="block text-sm font-medium mb-1"
+                  style={{ color: "rgb(75, 85, 99)" }}
+                >
+                  Número*
+                </label>{" "}
+                <input
+                  type="text"
+                  name="endereco.numero"
+                  value={formData.endereco.numero}
+                  onChange={handleChange}
+                  className={`w-full px-3 py-2 border rounded-md transition-colors ${
+                    validationErrors["endereco.numero"]
+                      ? "border-red-500"
+                      : "border-gray-300 focus:border-green-500"
+                  } focus:outline-none`}
+                  style={{
+                    borderColor: validationErrors["endereco.numero"]
+                      ? "#ef4444"
+                      : "#d1d5db",
+                    color: "rgb(75, 85, 99)",
+                  }}
+                  onFocus={(e) => {
+                    if (!validationErrors["endereco.numero"]) {
                       e.target.style.borderColor = "rgb(144, 199, 45)";
-                    }}
-                    onBlur={(e) => {
+                    }
+                  }}
+                  onBlur={(e) => {
+                    if (!validationErrors["endereco.numero"]) {
                       e.target.style.borderColor = "#d1d5db";
-                    }}
-                    placeholder="Sala 101"
-                  />
-                </div>
+                    }
+                  }}
+                  placeholder="123"
+                />
+                {validationErrors["endereco.numero"] && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {validationErrors["endereco.numero"]}
+                  </p>
+                )}
               </div>
               <div>
                 <label

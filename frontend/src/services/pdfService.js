@@ -19,6 +19,20 @@ pdfMake.fonts = {
     }
 };
 
+// Função para formatar data local evitando problemas de fuso horário
+const formatarDataLocal = (dataString) => {
+    if (!dataString) return '';
+
+    // Separar a data string (formato: YYYY-MM-DD)
+    const [ano, mes, dia] = dataString.split('-');
+
+    // Criar data local usando os componentes separados
+    const dataLocal = new Date(parseInt(ano), parseInt(mes) - 1, parseInt(dia));
+
+    // Formatar para o padrão brasileiro
+    return dataLocal.toLocaleDateString('pt-BR');
+};
+
 /**
  * Serviço responsável pela geração de certificados de calibração em PDF
  */
@@ -54,7 +68,7 @@ export class PDFService {    /**
 
         // Carregar a imagem do rodapé
         const imagemRodape = await PDFService.carregarImagemRodape();        // Gerar número do certificado baseado na série
-        const numeroCertificado = `CAL – ${dadosCertificado.numeroCertificado || 'XXXX'}/25`; const docDefinition = {
+        const numeroCertificado = `CAL – ${dadosCertificado.numeroCertificado || 'XXXX'}`; const docDefinition = {
             pageSize: 'A4',
             pageMargins: [40, imagemCabecalho ? 140 : 80, 40, imagemRodape ? 140 : 100],
             defaultStyle: {
@@ -155,7 +169,7 @@ export class PDFService {    /**
                 {
                     text: 'Padrões Utilizados:',
                     style: 'sectionTitle',
-                    margin: [0, 20, 0, 8]
+                    margin: [0, 5, 0, 8]
                 }, {
                     text: [
                         'Termohigrômetro Digital HT600 Instrutherm, Certificado RBC Nº CAL – C 15153/24, (Validade 08/2025).\n',
@@ -223,9 +237,8 @@ export class PDFService {    /**
                                 text: 'Diretor Responsável',
                                 style: 'signatureSubtext',
                                 alignment: 'center'
-                            }
-                        ]),],
-                    margin: (dadosCertificado.tipoInstrumento === 'monocanal' || dadosCertificado.tipoEquipamento === 'repipetador') ? [0, 1, 0, 0] : [0, 5, 0, 0],
+                            }]),],
+                    margin: (dadosCertificado.tipoInstrumento === 'monocanal' && dadosCertificado.tipoEquipamento !== 'repipetador') ? [0, 15, 0, 0] : [0, 5, 0, 0],
                     unbreakable: true
                 }
             ], styles: {
@@ -444,15 +457,13 @@ export class PDFService {    /**
                     { text: `${enderecoCompleto.toUpperCase()}\n`, style: 'dynamicText' },
 
                     { text: 'INSTRUMENTO: ', style: 'staticText' },
-                    { text: `${isRepipetador ? 'REPIPETADOR' : `MICROPIPETA ${dadosCertificado.tipoInstrumento === 'monocanal' ? 'MONOCANAL' : 'MULTICANAL'}`}\n`, style: 'dynamicText' },
-
-                    ...(isRepipetador ? [] : [
+                    { text: `${isRepipetador ? 'REPIPETADOR' : `MICROPIPETA ${dadosCertificado.tipoInstrumento === 'monocanal' ? 'MONOCANAL' : 'MULTICANAL'}`}\n`, style: 'dynamicText' }, ...(isRepipetador ? [] : [
                         { text: 'FAIXA DE INDICAÇÃO: ', style: 'staticText' },
-                        { text: `${dadosCertificado.faixaIndicacao || dadosCertificado.capacidade + ' ' + dadosCertificado.unidadeCapacidade}\n`, style: 'dynamicText' },
+                        { text: `${dadosCertificado.faixaIndicacao ? dadosCertificado.faixaIndicacao + dadosCertificado.unidadeFaixaIndicacao : dadosCertificado.capacidade + dadosCertificado.unidadeCapacidade}\n`, style: 'dynamicText' },
 
                         { text: 'FAIXA CALIBRADA: ', style: 'staticText' },
-                        { text: `${dadosCertificado.faixaCalibrada || dadosCertificado.capacidade + ' ' + dadosCertificado.unidadeCapacidade}\n`, style: 'dynamicText' },
-                    ]),                    { text: 'FABRICANTE: ', style: 'staticText' },
+                        { text: `${dadosCertificado.faixaCalibrada ? dadosCertificado.faixaCalibrada + dadosCertificado.unidadeFaixaCalibrada : dadosCertificado.capacidade + dadosCertificado.unidadeCapacidade}\n`, style: 'dynamicText' },
+                    ]), { text: 'FABRICANTE: ', style: 'staticText' },
                     { text: `${dadosCertificado.marcaPipeta?.toUpperCase() || 'N/A'}\n`, style: 'dynamicText' },
 
                     { text: 'Nº DE IDENTIFICAÇÃO: ', style: 'staticText' },
@@ -462,13 +473,11 @@ export class PDFService {    /**
                     { text: `${dadosCertificado.numeroPipeta || 'N/A'}\n`, style: 'dynamicText' },
 
                     { text: 'MODELO: ', style: 'staticText' },
-                    { text: `${dadosCertificado.modeloPipeta?.toUpperCase() || 'N/A'}\n`, style: 'dynamicText' },
-
-                    { text: 'DATA DE CALIBRAÇÃO: ', style: 'staticText' },
-                    { text: `${new Date(dadosCertificado.dataCalibracao).toLocaleDateString('pt-BR')}\n`, style: 'dynamicText' },
+                    { text: `${dadosCertificado.modeloPipeta?.toUpperCase() || 'N/A'}\n`, style: 'dynamicText' }, { text: 'DATA DE CALIBRAÇÃO: ', style: 'staticText' },
+                    { text: `${formatarDataLocal(dadosCertificado.dataCalibracao)}\n`, style: 'dynamicText' },
 
                     { text: 'DATA DA EMISSÃO DO CERTIFICADO: ', style: 'staticText' },
-                    { text: `${new Date().toLocaleDateString('pt-BR')}`, style: 'dynamicText' }
+                    { text: `${formatarDataLocal(dadosCertificado.dataCalibracao)}`, style: 'dynamicText' }
                 ],
                 margin: [0, 0, 0, 15]
             }];
@@ -539,7 +548,7 @@ export class PDFService {    /**
             tabelas.push({
                 table: {
                     headerRows: 0,
-                    widths: [110, 10, 50],
+                    widths: [110, 10, 60], // Aumentado coluna de valores de 50 para 60
                     dontBreakRows: true,
                     body: [[
                         { text: `Ponto ${index + 1} de medição`, style: 'staticTextTable' },
@@ -603,17 +612,17 @@ export class PDFService {    /**
             const quantidadePontos = pontosNessaLinha.length;            // Configuração de larguras das colunas com base na quantidade de pontos
             const configuracoes = {
                 1: {
-                    widths: [120, 8, 50],
+                    widths: [110, 8, 60], // Aumentado coluna de valores de 50 para 60
                     fontSize: 10,
                     padding: { left: 4, right: 4, top: 0, bottom: 0 }
                 },
                 2: {
-                    widths: [110, 6, 50, 15, 110, 6, 50], // Adicionada coluna de espaçamento (15) entre os pontos
+                    widths: [100, 6, 60, 15, 100, 6, 60], // Aumentado colunas de valores de 50 para 60, ajustado labels de 110 para 100
                     fontSize: 9,
                     padding: { left: 3, right: 3, top: 0, bottom: 0 }
                 },
                 3: {
-                    widths: [95, 5, 40, 12, 95, 5, 40, 12, 95, 5, 40], // Adicionadas colunas de espaçamento (12) entre os pontos
+                    widths: [85, 5, 50, 12, 85, 5, 50, 12, 85, 5, 50], // Aumentado colunas de valores de 40 para 50, ajustado labels de 95 para 85
                     fontSize: 8,
                     padding: { left: 2, right: 2, top: 0, bottom: 0 }
                 }
@@ -782,19 +791,19 @@ export class PDFService {    /**
     /**
      * Formata o endereço completo do cliente
      */    /**
-     * Formata o endereço completo do cliente para exibição no certificado
-     * Padrão: "Logradouro, número/complemento - Bairro - Cidade - Estado - CEP 00000-000"
-     * Exemplo: "Avenida Thomas Edison, 294/296 - Barra Funda - São Paulo - SP - CEP 01140-000"
-     */
+* Formata o endereço completo do cliente para exibição no certificado
+* Padrão: "Logradouro, número - Bairro - Cidade - Estado - CEP 00000-000"
+* Exemplo: "Avenida Thomas Edison, 294 - Barra Funda - São Paulo - SP - CEP 01140-000"
+*/
     static formatarEnderecoCompleto(cliente) {
         if (!cliente) return 'N/A';
 
         // Verificar se o endereço está em cliente.endereco ou diretamente em cliente
         const enderecoData = cliente.endereco || cliente;
-        
+
         if (!enderecoData) return 'Endereço não informado';
 
-        // Construir endereço seguindo o padrão: "Logradouro, número/complemento - Bairro - Cidade - Estado - CEP"
+        // Construir endereço seguindo o padrão: "Logradouro, número - Bairro - Cidade - Estado - CEP"
         let enderecoFormatado = '';
 
         // 1. Logradouro (rua, avenida, etc.)
@@ -803,15 +812,10 @@ export class PDFService {    /**
             enderecoFormatado += logradouro;
         }
 
-        // 2. Número e complemento juntos
+        // 2. Número
         if (enderecoData.numero) {
             if (enderecoFormatado) enderecoFormatado += ', ';
             enderecoFormatado += enderecoData.numero;
-            
-            // Adicionar complemento junto com o número usando "/"
-            if (enderecoData.complemento) {
-                enderecoFormatado += `/${enderecoData.complemento}`;
-            }
         }
 
         // 3. Bairro
@@ -920,7 +924,7 @@ export class PDFService {    /**
             return [];
         }
 
-        const tabelas = [];        seringas.forEach((seringa, seringaIndex) => {
+        const tabelas = []; seringas.forEach((seringa, seringaIndex) => {
             // Título da seringa
             tabelas.push({
                 text: `Seringa de ${seringa.volumeNominal}${seringa.unidade || 'µL'}:`,

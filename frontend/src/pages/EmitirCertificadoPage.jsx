@@ -69,7 +69,9 @@ const EmitirCertificadoPage = () => {
     capacidade: "",
     unidadeCapacidade: "µL",
     faixaIndicacao: "", // Faixa de indicação da pipeta
+    unidadeFaixaIndicacao: "µL",
     faixaCalibrada: "", // Faixa calibrada da pipeta
+    unidadeFaixaCalibrada: "µL",
     tipoInstrumento: "monocanal", // Tipo de instrumento (monocanal/multicanal)
     quantidadeCanais: 8, // Quantidade de canais para multicanal (8 ou 12)
     temperatura: "20.0",
@@ -223,15 +225,15 @@ const EmitirCertificadoPage = () => {
       const novoFormData = {
         ...formData,
         [name]: value,
-      };
-
-      // Se mudou para repipetador, limpa campos específicos de micropipetas e força tipo de instrumento como monocanal
+      }; // Se mudou para repipetador, limpa campos específicos de micropipetas e força tipo de instrumento como monocanal
       if (value === "repipetador") {
         novoFormData.tipoInstrumento = "monocanal";
         novoFormData.quantidadeCanais = 1;
         novoFormData.capacidade = "";
         novoFormData.faixaIndicacao = "";
+        novoFormData.unidadeFaixaIndicacao = "µL";
         novoFormData.faixaCalibrada = "";
+        novoFormData.unidadeFaixaCalibrada = "µL";
         // Reorganiza pontos para monocanal se necessário
         reorganizarPontosParaMonocanal();
       }
@@ -1075,9 +1077,7 @@ const EmitirCertificadoPage = () => {
       return; // Não remove se é a última seringa
     }
     removerSeringa(seringaId);
-  };
-
-  // Função para gerar valores próximos ao valor base para outros canais
+  };  // Função para gerar valores próximos ao valor base para outros canais (multicanal)
   const gerarValoresProximos = (valorBase, variacao = 0.15) => {
     const numeroValor = parseFloat(valorBase);
     if (isNaN(numeroValor)) return valorBase;
@@ -1094,7 +1094,48 @@ const EmitirCertificadoPage = () => {
       ? valorBase.split(".")[1].length
       : 1;
     return Math.max(0, novoValor).toFixed(casasDecimais); // Garante que não seja negativo
-  }; // Função para processar valores separados por vírgula em um único input
+  };
+
+  // Função para gerar valores semelhantes sem repetições (baseada no código Python do usuário)
+  const gerarValoresSemelhantesMonocanal = (valores, numValores = 5, limite = 0.03) => {
+    const valoresSemelhantes = [];
+    const valoresOriginais = valores.map(v => parseFloat(v));
+    
+    // Para cada valor original, gerar valores semelhantes
+    for (const valor of valoresOriginais) {
+      const valoresToGerar = Math.ceil(numValores / valoresOriginais.length);
+      
+      for (let i = 0; i < valoresToGerar; i++) {
+        let tentativas = 0;
+        let novoValor;
+        
+        do {
+          // Gera variação aleatória dentro do limite especificado
+          const variacao = (Math.random() - 0.5) * 2 * limite;
+          novoValor = parseFloat((valor + variacao).toFixed(2));
+          tentativas++;
+          
+          // Evita loop infinito se não conseguir gerar valor único
+          if (tentativas > 50) break;
+        } while (
+          valoresSemelhantes.includes(novoValor) || 
+          valoresOriginais.includes(novoValor) ||
+          novoValor <= 0
+        );
+        
+        if (novoValor > 0) {
+          valoresSemelhantes.push(novoValor);
+        }
+        
+        // Para quando atingir o número desejado
+        if (valoresSemelhantes.length >= numValores) break;
+      }
+      
+      if (valoresSemelhantes.length >= numValores) break;
+    }
+    
+    return valoresSemelhantes.slice(0, numValores);
+  };// Função para processar valores separados por vírgula em um único input
   const handleValoresChange = (pontoId, valores) => {
     // Processa a string de valores separados por vírgula
     const valoresArray = valores
@@ -1113,9 +1154,7 @@ const EmitirCertificadoPage = () => {
 
     // Para monocanais: se exatamente 5 valores foram inseridos, a string termina com vírgula
     // e a automação está ativa, gera os outros 5 valores automaticamente
-    const terminaComVirgula = valores.trimEnd().endsWith(",");
-
-    if (
+    const terminaComVirgula = valores.trimEnd().endsWith(",");    if (
       isMonocanal &&
       valoresArray.length === 5 &&
       terminaComVirgula &&
@@ -1126,13 +1165,11 @@ const EmitirCertificadoPage = () => {
         medicoesPadrao[index] = valor;
       });
 
-      // Gera os próximos 5 valores similares
-      valoresArray.forEach((valor, index) => {
-        const valorProximo = gerarValoresProximos(valor);
-        medicoesPadrao[index + 5] = valorProximo;
-      });
-
-      // Mostrar notificação de automação para monocanal
+      // Gera os próximos 5 valores similares usando a função baseada no código Python
+      const valoresSemelhantes = gerarValoresSemelhantesMonocanal(valoresArray, 5);
+      valoresSemelhantes.forEach((valor, index) => {
+        medicoesPadrao[index + 5] = valor.toString();
+      });// Mostrar notificação de automação para monocanal
       setAutoPreenchimento({
         ativo: true,
         mensagem: `Gerando automaticamente os 5 valores restantes com base nos valores inseridos...`,
@@ -2029,19 +2066,23 @@ const EmitirCertificadoPage = () => {
                 {/* Campos Faixa de Indicação e Faixa Calibrada - apenas para micropipetas */}
                 {formData.tipoEquipamento === "micropipeta" && (
                   <>
-                    <FormInput
+                    <VolumeInput
                       label="Faixa de Indicação"
-                      name="faixaIndicacao"
-                      value={formData.faixaIndicacao}
+                      volumeName="faixaIndicacao"
+                      unitName="unidadeFaixaIndicacao"
+                      volumeValue={formData.faixaIndicacao}
+                      unitValue={formData.unidadeFaixaIndicacao}
                       onChange={handleChange}
-                      placeholder="Ex: 100-1000 µL"
+                      placeholder="Ex: 100-1000"
                     />
-                    <FormInput
+                    <VolumeInput
                       label="Faixa Calibrada"
-                      name="faixaCalibrada"
-                      value={formData.faixaCalibrada}
+                      volumeName="faixaCalibrada"
+                      unitName="unidadeFaixaCalibrada"
+                      volumeValue={formData.faixaCalibrada}
+                      unitValue={formData.unidadeFaixaCalibrada}
                       onChange={handleChange}
-                      placeholder="Ex: 100-1000 µL"
+                      placeholder="Ex: 100-1000"
                     />
                   </>
                 )}{" "}
