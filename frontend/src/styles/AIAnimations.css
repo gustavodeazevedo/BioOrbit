@@ -50,7 +50,7 @@
   border: 2px solid rgb(144, 199, 45);
   box-shadow: 0 0 12px rgba(144, 199, 45, 0.6);
   animation: movingDot 5s infinite linear;
-  transform: translateX(-50%) translateY(-4.7px);
+  transform: translateX(-50%) translateY(-2.8px);
   z-index: 15;
   top: 0;
   will-change: left;
