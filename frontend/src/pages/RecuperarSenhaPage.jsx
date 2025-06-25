@@ -48,8 +48,8 @@ const RecuperarSenhaPage = () => {
       <div className="login-form">
         <div className="login-logo">
           <img
-            src="/images/logo-bio-research.png"
-            alt="Bio Research do Brasil Logo"
+            src="/images/bioorbit-logo.png"
+            alt="BioOrbit Logo"
             className="logo-image"
           />
         </div>

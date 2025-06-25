@@ -60,8 +60,8 @@ const LoginPage = () => {
         {" "}
         <div className="login-logo">
           <img
-            src="/images/logo-bio-research.png"
-            alt="BioResearch do Brasil Logo"
+            src="/images/bioorbit-logo.png"
+            alt="BioOrbit Logo"
             className="logo-image"
           />
         </div>

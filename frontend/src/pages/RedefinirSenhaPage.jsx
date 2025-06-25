@@ -77,8 +77,8 @@ const RedefinirSenhaPage = () => {
       <div className="login-container">
         <div className="login-logo">
           <img
-            src="/images/logo-bio-research.png"
-            alt="Bio Research do Brasil Logo"
+            src="/images/bioorbit-logo.png"
+            alt="BioOrbit Logo"
             className="logo-image"
           />
         </div>
@@ -102,8 +102,8 @@ const RedefinirSenhaPage = () => {
     <div className="login-container">
       <div className="login-logo">
         <img
-          src="/images/logo-bio-research.png"
-          alt="Bio Research do Brasil Logo"
+          src="/images/bioorbit-logo.png"
+          alt="BioOrbit Logo"
           className="logo-image"
         />
       </div>
