@@ -70,10 +70,14 @@ export class PDFService {    /**
         const imagemRodape = await PDFService.carregarImagemRodape();        // Gerar número do certificado baseado na série
         const numeroCertificado = `CAL – ${dadosCertificado.numeroCertificado || 'XXXX'}`; const docDefinition = {
             pageSize: 'A4',
-            pageMargins: [40, imagemCabecalho ? 140 : 80, 40, imagemRodape ? 140 : 100],
+            pageMargins: [40, imagemCabecalho ? 140 : 80, 40, imagemRodape ?
+                // Margem dinâmica baseada no número de pontos para monocanais
+                (dadosCertificado.tipoInstrumento === 'monocanal' && dadosCertificado.tipoEquipamento !== 'repipetador' && pontosCalibra.length === 1) ? 135 :
+                    (dadosCertificado.tipoInstrumento === 'monocanal' && dadosCertificado.tipoEquipamento !== 'repipetador' && pontosCalibra.length === 2) ? 135 :
+                        140 : 100],
             defaultStyle: {
                 font: 'Roboto'
-            },            // Cabeçalho em todas as páginas
+            },// Cabeçalho em todas as páginas
             header: function (currentPage, pageCount) {
                 // Margens diferentes para monocanal vs multicanal
                 const isMonocanal = dadosCertificado.tipoInstrumento === 'monocanal';
@@ -238,7 +242,11 @@ export class PDFService {    /**
                                 style: 'signatureSubtext',
                                 alignment: 'center'
                             }]),],
-                    margin: (dadosCertificado.tipoInstrumento === 'monocanal' && dadosCertificado.tipoEquipamento !== 'repipetador') ? [0, 15, 0, 0] : [0, 5, 0, 0],
+                    margin: (dadosCertificado.tipoInstrumento === 'monocanal' && dadosCertificado.tipoEquipamento !== 'repipetador') ?
+                        // Para monocanais, margem menor já que aumentamos o espaço da página
+                        pontosCalibra.length === 1 ? [0, 5, 0, 0] :
+                            pontosCalibra.length === 2 ? [0, 10, 0, 0] :
+                                [0, 15, 0, 0] : [0, 5, 0, 0],
                     unbreakable: true
                 }
             ], styles: {
@@ -516,8 +524,11 @@ export class PDFService {    /**
         const canaisOrdenados = Object.keys(pontosPorCanal).sort((a, b) => parseInt(a) - parseInt(b)); canaisOrdenados.forEach((canal, canalIndex) => {
             const pontosDoCanal = pontosPorCanal[canal];
 
-            // Criar as tabelas dos pontos deste canal
-            const tabelasDoCanal = PDFService.criarTabelasLadoALado(pontosDoCanal);
+            // Ordenar pontos do canal por pontoPosicao
+            pontosDoCanal.sort((a, b) => (a.pontoPosicao || 0) - (b.pontoPosicao || 0));
+
+            // Criar as tabelas dos pontos deste canal usando numeração baseada em pontoPosicao
+            const tabelasDoCanal = PDFService.criarTabelasLadoALadoMulticanal(pontosDoCanal);
 
             // Agrupar título e tabelas do canal em um bloco não quebrável
             const blocoCanal = {
@@ -534,6 +545,147 @@ export class PDFService {    /**
 
             tabelas.push(blocoCanal);
         });
+
+        return tabelas;
+    }
+
+    /**
+     * Cria tabelas lado a lado específica para multicanais, respeitando a pontoPosicao
+     */
+    static criarTabelasLadoALadoMulticanal(pontosCalibra) {
+        if (!pontosCalibra || pontosCalibra.length === 0) {
+            return [];
+        }
+
+        const tabelas = [];
+        const PONTOS_POR_LINHA = 3; // Sempre 3 pontos por linha para manter consistência visual
+
+        // Configuração fixa que SEMPRE será usada, independente do número de pontos
+        const configFixa = {
+            widths: [85, 5, 50, 12, 85, 5, 50, 12, 85, 5, 50], // Sempre 11 colunas = 3 pontos
+            fontSize: 8,
+            padding: { left: 2, right: 2, top: 0, bottom: 0 }
+        };
+
+        for (let i = 0; i < pontosCalibra.length; i += PONTOS_POR_LINHA) {
+            const pontosOriginais = pontosCalibra.slice(i, i + PONTOS_POR_LINHA);
+
+            // SEMPRE criar array com exatamente 3 elementos para manter estrutura idêntica
+            const pontosPadronizados = [
+                pontosOriginais[0] || null,
+                pontosOriginais[1] || null,
+                pontosOriginais[2] || null
+            ];
+
+            // Função para criar célula vazia com bordas invisíveis
+            const criarCelulaVazia = () => ({
+                text: '',
+                border: [false, false, false, false],
+                fontSize: configFixa.fontSize
+            });
+
+            // Função para criar coluna de ponto (sempre 3 células + separador se não for último)
+            const criarColunaPonto = (ponto, indice, isUltimo) => {
+                if (!ponto) {
+                    // Ponto vazio: 3 células vazias + separador se não for último
+                    const colunas = [criarCelulaVazia(), criarCelulaVazia(), criarCelulaVazia()];
+                    if (!isUltimo) {
+                        colunas.push(criarCelulaVazia()); // Separador
+                    }
+                    return colunas;
+                }
+
+                const colunas = [
+                    { text: `Ponto ${ponto.pontoPosicao || (indice + 1)} de medição`, style: 'staticTextTable', fontSize: configFixa.fontSize, bold: true },
+                    { text: ':', style: 'staticTextTable', alignment: 'center', fontSize: configFixa.fontSize },
+                    { text: `${ponto.volumeNominal}${ponto.unidade || 'µL'}`, style: 'dynamicText', fontSize: configFixa.fontSize, bold: true }
+                ];
+
+                // Sempre adicionar separador se não for o último (índice 2)
+                if (!isUltimo) {
+                    colunas.push(criarCelulaVazia());
+                }
+
+                return colunas;
+            };
+
+            // Função para criar linha de dados (sempre 11 colunas)
+            const criarLinhaDados = (propriedade, label, unidadePadrao = '') => {
+                return pontosPadronizados.flatMap((ponto, idx) => {
+                    const isUltimo = idx === 2;
+
+                    if (!ponto) {
+                        return criarColunaPonto(null, idx, isUltimo);
+                    }
+
+                    let valor = '';
+                    if (propriedade === 'medicoes') {
+                        valor = `${ponto.medicoes.filter(m => m !== '').length}`;
+                    } else if (propriedade === 'media') {
+                        valor = `${ponto.media ? PDFService.formatarNumero(ponto.media) : '0,00'}${ponto.unidade || unidadePadrao}`;
+                    } else if (propriedade === 'inexatidao') {
+                        valor = `${ponto.inexatidao ? PDFService.formatarNumero(ponto.inexatidao) : '0,00'}${ponto.unidade || unidadePadrao}`;
+                    } else if (propriedade === 'desvioPadrao') {
+                        valor = `${ponto.desvioPadrao ? PDFService.formatarNumero(ponto.desvioPadrao) : '0,00'}${ponto.unidade || unidadePadrao}`;
+                    }
+
+                    const colunas = [
+                        { text: label, style: 'dynamicText', fontSize: configFixa.fontSize, bold: false },
+                        { text: ':', style: 'dynamicText', alignment: 'center', fontSize: configFixa.fontSize, bold: false },
+                        { text: valor, style: 'dynamicText', fontSize: configFixa.fontSize, bold: false }
+                    ];
+
+                    if (!isUltimo) {
+                        colunas.push(criarCelulaVazia());
+                    }
+
+                    return colunas;
+                });
+            };
+
+            // Criação das 5 linhas da tabela (SEMPRE 5 linhas x 11 colunas)
+            const linhas = [
+                // Linha 1: Títulos dos pontos
+                pontosPadronizados.flatMap((ponto, idx) => criarColunaPonto(ponto, idx, idx === 2)),
+
+                // Linha 2: Número de medições  
+                criarLinhaDados('medicoes', 'Número de medições'),
+
+                // Linha 3: Média
+                criarLinhaDados('media', 'Média', 'µL'),
+
+                // Linha 4: Inexatidão
+                criarLinhaDados('inexatidao', 'Inexatidão / ISO8655', 'µL'),
+
+                // Linha 5: Incerteza
+                criarLinhaDados('desvioPadrao', 'Incerteza / ISO8655', 'µL')
+            ];
+
+            // Criação da tabela com configuração SEMPRE idêntica
+            tabelas.push({
+                table: {
+                    headerRows: 0,
+                    widths: configFixa.widths, // SEMPRE as mesmas 11 larguras
+                    body: linhas, // SEMPRE 5 linhas x 11 colunas
+                    dontBreakRows: true
+                },
+                layout: {
+                    hLineWidth: (i, node) => (i === 0 || i === node.table.body.length) ? 1 : 0,
+                    vLineWidth: (i, node) => {
+                        // Layout SEMPRE para 3 pontos (posições fixas das bordas verticais)
+                        // [0:P1][1::][2:val] | [3:esp] | [4:P2][5::][6:val] | [7:esp] | [8:P3][9::][10:val]
+                        return (i === 0 || i === 3 || i === 4 || i === 7 || i === 8 || i === 11) ? 1 : 0;
+                    },
+                    hLineColor: '#000000',
+                    vLineColor: '#000000',
+                    paddingLeft: () => configFixa.padding.left,
+                    paddingRight: () => configFixa.padding.right,
+                    paddingTop: () => configFixa.padding.top,
+                    paddingBottom: () => configFixa.padding.bottom
+                },
+                margin: [0, 0, 0, 15]
+            });
+        }
 
         return tabelas;
     }

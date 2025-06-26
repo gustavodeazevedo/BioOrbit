@@ -106,6 +106,8 @@ const EmitirCertificadoPage = () => {
   // Estado para controlar o número de canais (para multicanal)
   const [numeroCanais, setNumeroCanais] = useState(1); // Estado para controlar a quantidade de canais selecionada pelo usuário
   const [quantidadeCanais, setQuantidadeCanais] = useState(8); // 8 ou 12 canais
+  // Estado para controlar o número de pontos por canal (para multicanal)
+  const [pontosPorCanal, setPontosPorCanal] = useState(3); // Padrão de 3 pontos por canal
 
   // Estado para gerenciar seringas do repipetador
   const [seringas, setSeringas] = useState([]);
@@ -278,7 +280,6 @@ const EmitirCertificadoPage = () => {
   const reorganizarPontosParaMulticanal = () => {
     // Usar a quantidade de canais selecionada pelo usuário
     const novosCanais = quantidadeCanais; // 8 ou 12 canais conforme seleção
-    const pontosPorCanal = 3;
     const novosPontos = [];
 
     for (let canal = 1; canal <= novosCanais; canal++) {
@@ -303,6 +304,23 @@ const EmitirCertificadoPage = () => {
     setPontosCalibra(novosPontos);
     setNumeroCanais(novosCanais);
   };
+
+  // Função para atualizar o número de pontos por canal
+  const handlePontosPorCanalChange = (novoNumero) => {
+    setPontosPorCanal(novoNumero);
+
+    // Se estiver em modo multicanal, reorganiza os pontos
+    if (formData.tipoInstrumento === "multicanal") {
+      reorganizarPontosParaMulticanal();
+    }
+  };
+
+  // Efeito para reorganizar pontos quando pontosPorCanal muda
+  useEffect(() => {
+    if (formData.tipoInstrumento === "multicanal") {
+      reorganizarPontosParaMulticanal();
+    }
+  }, [pontosPorCanal]);
   // Função para reorganizar pontos para layout monocanal
   const reorganizarPontosParaMonocanal = () => {
     // Volta ao layout padrão com um ponto
@@ -333,7 +351,6 @@ const EmitirCertificadoPage = () => {
 
     // Se já estiver em modo multicanal, reorganiza os pontos com a nova quantidade
     if (formData.tipoInstrumento === "multicanal") {
-      const pontosPorCanal = 3;
       const novosPontos = [];
 
       for (let canal = 1; canal <= novaQuantidade; canal++) {
@@ -575,57 +592,6 @@ const EmitirCertificadoPage = () => {
       alert(
         "Erro ao gerar o certificado. Verifique se todos os dados estão preenchidos corretamente."
       );
-    }
-  };
-  // Função para adicionar um novo ponto de calibração
-  const adicionarPontoCalibracao = () => {
-    if (formData.tipoInstrumento === "multicanal") {
-      // Para multicanal, adicionar um novo canal completo
-      const novoCanal = numeroCanais + 1;
-      const pontosPorCanal = 3;
-      const novosPontos = [];
-
-      // Verificar se não ultrapassou o limite de canais
-      if (novoCanal > quantidadeCanais) {
-        alert(`Limite máximo de ${quantidadeCanais} canais atingido.`);
-        return;
-      }
-
-      for (let ponto = 1; ponto <= pontosPorCanal; ponto++) {
-        novosPontos.push({
-          id: Date.now() + novoCanal * 100 + ponto,
-          volumeNominal: "",
-          unidade: "µL",
-          medicoes: Array(10).fill(""),
-          valoresTexto: "",
-          media: null,
-          mediaMassa: null,
-          inexatidao: null,
-          inexatidaoPercentual: null,
-          desvioPadrao: null,
-          canal: novoCanal,
-          pontoPosicao: ponto,
-        });
-      }
-
-      setPontosCalibra([...pontosCalibra, ...novosPontos]);
-      setNumeroCanais(novoCanal);
-    } else {
-      // Para monocanal, adicionar um ponto individual
-      const novoPonto = {
-        id: Date.now(),
-        volumeNominal: "",
-        unidade: "µL",
-        medicoes: Array(10).fill(""),
-        valoresTexto: "",
-        media: null,
-        mediaMassa: null,
-        inexatidao: null,
-        inexatidaoPercentual: null,
-        desvioPadrao: null,
-      };
-
-      setPontosCalibra([...pontosCalibra, novoPonto]);
     }
   };
   // Função para remover um ponto de calibração
@@ -1077,7 +1043,7 @@ const EmitirCertificadoPage = () => {
       return; // Não remove se é a última seringa
     }
     removerSeringa(seringaId);
-  };  // Função para gerar valores próximos ao valor base para outros canais (multicanal)
+  }; // Função para gerar valores próximos ao valor base para outros canais (multicanal)
   const gerarValoresProximos = (valorBase, variacao = 0.15) => {
     const numeroValor = parseFloat(valorBase);
     if (isNaN(numeroValor)) return valorBase;
@@ -1097,45 +1063,49 @@ const EmitirCertificadoPage = () => {
   };
 
   // Função para gerar valores semelhantes sem repetições (baseada no código Python do usuário)
-  const gerarValoresSemelhantesMonocanal = (valores, numValores = 5, limite = 0.03) => {
+  const gerarValoresSemelhantesMonocanal = (
+    valores,
+    numValores = 5,
+    limite = 0.03
+  ) => {
     const valoresSemelhantes = [];
-    const valoresOriginais = valores.map(v => parseFloat(v));
-    
+    const valoresOriginais = valores.map((v) => parseFloat(v));
+
     // Para cada valor original, gerar valores semelhantes
     for (const valor of valoresOriginais) {
       const valoresToGerar = Math.ceil(numValores / valoresOriginais.length);
-      
+
       for (let i = 0; i < valoresToGerar; i++) {
         let tentativas = 0;
         let novoValor;
-        
+
         do {
           // Gera variação aleatória dentro do limite especificado
           const variacao = (Math.random() - 0.5) * 2 * limite;
           novoValor = parseFloat((valor + variacao).toFixed(2));
           tentativas++;
-          
+
           // Evita loop infinito se não conseguir gerar valor único
           if (tentativas > 50) break;
         } while (
-          valoresSemelhantes.includes(novoValor) || 
+          valoresSemelhantes.includes(novoValor) ||
           valoresOriginais.includes(novoValor) ||
           novoValor <= 0
         );
-        
+
         if (novoValor > 0) {
           valoresSemelhantes.push(novoValor);
         }
-        
+
         // Para quando atingir o número desejado
         if (valoresSemelhantes.length >= numValores) break;
       }
-      
+
       if (valoresSemelhantes.length >= numValores) break;
     }
-    
+
     return valoresSemelhantes.slice(0, numValores);
-  };// Função para processar valores separados por vírgula em um único input
+  }; // Função para processar valores separados por vírgula em um único input
   const handleValoresChange = (pontoId, valores) => {
     // Processa a string de valores separados por vírgula
     const valoresArray = valores
@@ -1154,7 +1124,8 @@ const EmitirCertificadoPage = () => {
 
     // Para monocanais: se exatamente 5 valores foram inseridos, a string termina com vírgula
     // e a automação está ativa, gera os outros 5 valores automaticamente
-    const terminaComVirgula = valores.trimEnd().endsWith(",");    if (
+    const terminaComVirgula = valores.trimEnd().endsWith(",");
+    if (
       isMonocanal &&
       valoresArray.length === 5 &&
       terminaComVirgula &&
@@ -1166,10 +1137,13 @@ const EmitirCertificadoPage = () => {
       });
 
       // Gera os próximos 5 valores similares usando a função baseada no código Python
-      const valoresSemelhantes = gerarValoresSemelhantesMonocanal(valoresArray, 5);
+      const valoresSemelhantes = gerarValoresSemelhantesMonocanal(
+        valoresArray,
+        5
+      );
       valoresSemelhantes.forEach((valor, index) => {
         medicoesPadrao[index + 5] = valor.toString();
-      });// Mostrar notificação de automação para monocanal
+      }); // Mostrar notificação de automação para monocanal
       setAutoPreenchimento({
         ativo: true,
         mensagem: `Gerando automaticamente os 5 valores restantes com base nos valores inseridos...`,
@@ -2032,33 +2006,84 @@ const EmitirCertificadoPage = () => {
                     />
                     {/* Seleção de quantidade de canais - só aparece quando multicanal está selecionado */}
                     {formData.tipoInstrumento === "multicanal" && (
-                      <div className="mt-3 p-3 bg-green-50 rounded-md border border-green-200">
-                        <label
-                          className="block text-sm font-medium mb-2"
-                          style={{ color: "rgb(75, 85, 99)" }}
-                        >
-                          Quantidade de Canais
-                        </label>
-                        <RadioGroup
-                          name="quantidadeCanais"
-                          value={quantidadeCanais.toString()}
-                          onChange={(e) =>
-                            handleQuantidadeCanaisChange(
-                              parseInt(e.target.value)
-                            )
-                          }
-                          variant="canais"
-                          options={[
-                            {
-                              value: "8",
-                              label: "8 Canais",
-                            },
-                            {
-                              value: "12",
-                              label: "12 Canais",
-                            },
-                          ]}
-                        />
+                      <div className="mt-3 space-y-4">
+                        <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
+                          <label
+                            className="block text-sm font-medium mb-2"
+                            style={{ color: "rgb(75, 85, 99)" }}
+                          >
+                            Quantidade de Canais
+                          </label>
+                          <RadioGroup
+                            name="quantidadeCanais"
+                            value={quantidadeCanais.toString()}
+                            onChange={(e) =>
+                              handleQuantidadeCanaisChange(
+                                parseInt(e.target.value)
+                              )
+                            }
+                            variant="canais"
+                            options={[
+                              {
+                                value: "8",
+                                label: "8 Canais",
+                              },
+                              {
+                                value: "12",
+                                label: "12 Canais",
+                              },
+                            ]}
+                          />
+                        </div>
+
+                        {/* Configuração de pontos por canal */}
+                        <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
+                          <div className="flex items-center justify-between mb-2">
+                            <label
+                              className="block text-sm font-medium"
+                              style={{ color: "rgb(75, 85, 99)" }}
+                            >
+                              Pontos de Calibração por Canal
+                            </label>
+                          </div>
+                          <div className="flex items-center space-x-3">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handlePontosPorCanalChange(
+                                  Math.max(1, pontosPorCanal - 1)
+                                )
+                              }
+                              className="flex items-center justify-center w-8 h-8 bg-white border border-gray-300 rounded-md hover:bg-gray-50 text-gray-600 transition-colors"
+                              disabled={pontosPorCanal <= 1}
+                            >
+                              <Minus size={16} />
+                            </button>
+                            <span className="px-3 py-1 bg-white border border-gray-300 rounded-md text-center font-medium min-w-[3rem]">
+                              {pontosPorCanal}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handlePontosPorCanalChange(
+                                  Math.min(10, pontosPorCanal + 1)
+                                )
+                              }
+                              className="flex items-center justify-center w-8 h-8 bg-white border border-gray-300 rounded-md hover:bg-gray-50 text-gray-600 transition-colors"
+                              disabled={pontosPorCanal >= 10}
+                            >
+                              <Plus size={16} />
+                            </button>
+                            <span className="text-sm text-gray-600">
+                              pontos por canal
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-600 mt-2">
+                            Cada canal terá {pontosPorCanal} ponto
+                            {pontosPorCanal !== 1 ? "s" : ""} de calibração
+                            inicialmente.
+                          </p>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -2168,6 +2193,14 @@ const EmitirCertificadoPage = () => {
                     <div className="flex space-x-2">
                       {" "}
                       <ActionButton
+                        onClick={adicionarPonto}
+                        variant="outline-small"
+                        icon={Plus}
+                        title="Adicionar novo ponto de calibração"
+                      >
+                        Adicionar Ponto
+                      </ActionButton>
+                      <ActionButton
                         onClick={() =>
                           setAutomacaoHabilitada(!automacaoHabilitada)
                         }
@@ -2185,14 +2218,6 @@ const EmitirCertificadoPage = () => {
                         <span className="relative z-10">
                           Automação: {automacaoHabilitada ? "Ativa" : "Inativa"}
                         </span>
-                      </ActionButton>
-                      <ActionButton
-                        onClick={adicionarPontoCalibracao}
-                        variant="outline-small"
-                        icon={Plus}
-                        title="Adicionar novo ponto de calibração"
-                      >
-                        Adicionar Ponto
                       </ActionButton>
                     </div>
                   )}
@@ -2533,29 +2558,31 @@ const EmitirCertificadoPage = () => {
                             Canal {canalNum}{" "}
                             {canalNum === 1 && <CanalMestreBadge />}
                           </h4>
-                          {numeroCanais > 1 && canalNum !== 1 && (
-                            <button
-                              type="button"
-                              className="flex items-center px-2 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-md border border-red-200 transition-colors"
-                              onClick={() => {
-                                const primeiroPontoDoCanal =
-                                  pontosDoCanalAtual[0];
-                                if (primeiroPontoDoCanal) {
-                                  removerPontoDiretamente(
-                                    primeiroPontoDoCanal.id,
-                                    canalNum,
-                                    true
-                                  );
-                                }
-                              }}
-                              title={`Remover canal ${canalNum} completo`}
-                            >
-                              <Trash2 className="mr-1" size={14} />
-                              <span className="text-xs">Remover Canal</span>
-                            </button>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {numeroCanais > 1 && canalNum !== 1 && (
+                              <button
+                                type="button"
+                                className="flex items-center px-2 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-md border border-red-200 transition-colors"
+                                onClick={() => {
+                                  const primeiroPontoDoCanal =
+                                    pontosDoCanalAtual[0];
+                                  if (primeiroPontoDoCanal) {
+                                    removerPontoDiretamente(
+                                      primeiroPontoDoCanal.id,
+                                      canalNum,
+                                      true
+                                    );
+                                  }
+                                }}
+                                title={`Remover canal ${canalNum} completo`}
+                              >
+                                <Trash2 className="mr-1" size={14} />
+                                <span className="text-xs">Remover Canal</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
-                        {/* Container dos 3 pontos do canal */}
+                        {/* Container dos pontos do canal */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           {pontosDoCanalAtual.map((ponto, pontoIndex) => (
                             <div
@@ -2567,9 +2594,6 @@ const EmitirCertificadoPage = () => {
                                   <span className="text-sm font-medium text-gray-600">
                                     Ponto {ponto.pontoPosicao}
                                   </span>
-                                  <div className="px-2 py-1 rounded bg-green-100 text-green-800 text-xs">
-                                    Canal {canalNum}
-                                  </div>{" "}
                                 </div>
 
                                 <VolumeInputPoint
