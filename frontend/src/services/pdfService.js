@@ -348,10 +348,13 @@ export class PDFService {    /**
      */
     static async carregarImagemCabecalho() {
         const caminhosPossiveis = [
+            '/images/certificados/cabecalho.png',
             '/images/certificado-cabecalho.png',
             '/images/certificado-cabeçalho.png',
+            './images/certificados/cabecalho.png',
             './images/certificado-cabecalho.png',
             './images/certificado-cabeçalho.png',
+            './public/images/certificados/cabecalho.png',
             './public/images/certificado-cabecalho.png'
         ];
 
@@ -367,7 +370,7 @@ export class PDFService {    /**
         }        // Tenta com URL absoluto como último recurso
         try {
             const baseUrl = window.location.origin;
-            const caminhoAbsoluto = `${baseUrl}/images/certificado-cabecalho.png`;
+            const caminhoAbsoluto = `${baseUrl}/images/certificados/cabecalho.png`;
             console.log(`Tentando carregar imagem com URL absoluto: ${caminhoAbsoluto}`);
             const imagem = await imageToBase64(caminhoAbsoluto);
             console.log('Imagem do cabeçalho carregada com URL absoluto!');
@@ -384,8 +387,11 @@ export class PDFService {    /**
      */
     static async carregarImagemAssinatura() {
         const caminhosPossiveis = [
+            '/images/certificados/assinatura.png',
             '/images/certificado-assinatura.png',
+            './images/certificados/assinatura.png',
             './images/certificado-assinatura.png',
+            './public/images/certificados/assinatura.png',
             './public/images/certificado-assinatura.png'
         ];
 
@@ -403,7 +409,7 @@ export class PDFService {    /**
         // Tenta com URL absoluto como último recurso
         try {
             const baseUrl = window.location.origin;
-            const caminhoAbsoluto = `${baseUrl}/images/certificado-assinatura.png`;
+            const caminhoAbsoluto = `${baseUrl}/images/certificados/assinatura.png`;
             console.log(`Tentando carregar imagem da assinatura com URL absoluto: ${caminhoAbsoluto}`);
             const imagem = await imageToBase64(caminhoAbsoluto);
             console.log('Imagem da assinatura carregada com URL absoluto!');
@@ -420,8 +426,11 @@ export class PDFService {    /**
      */
     static async carregarImagemRodape() {
         const caminhosPossiveis = [
+            '/images/certificados/rodape.png',
             '/images/certificado-rodapé.png',
+            './images/certificados/rodape.png',
             './images/certificado-rodapé.png',
+            './public/images/certificados/rodape.png',
             './public/images/certificado-rodapé.png'
         ];
 
@@ -439,7 +448,7 @@ export class PDFService {    /**
         // Tenta com URL absoluto como último recurso
         try {
             const baseUrl = window.location.origin;
-            const caminhoAbsoluto = `${baseUrl}/images/certificado-rodapé.png`;
+            const caminhoAbsoluto = `${baseUrl}/images/certificados/rodape.png`;
             console.log(`Tentando carregar imagem do rodapé com URL absoluto: ${caminhoAbsoluto}`);
             const imagem = await imageToBase64(caminhoAbsoluto);
             console.log('Imagem do rodapé carregada com URL absoluto!');
@@ -620,7 +629,7 @@ export class PDFService {    /**
 
                     let valor = '';
                     if (propriedade === 'medicoes') {
-                        valor = `${ponto.medicoes.filter(m => m !== '').length}`;
+                        valor = '10'; // Número fixo de medições
                     } else if (propriedade === 'media') {
                         valor = `${ponto.media ? PDFService.formatarNumero(ponto.media) : '0,00'}${ponto.unidade || unidadePadrao}`;
                     } else if (propriedade === 'inexatidao') {
@@ -710,7 +719,7 @@ export class PDFService {    /**
                     [
                         { text: 'Número de medições', style: 'staticTextTable' },
                         { text: ':', style: 'staticTextTable', alignment: 'center' },
-                        { text: `${ponto.medicoes.filter(m => m !== '').length}`, style: 'dynamicText' }
+                        { text: '10', style: 'dynamicText' } // Número fixo de medições
                     ],
                     [
                         { text: 'Média', style: 'staticTextTable' },
@@ -800,7 +809,7 @@ export class PDFService {    /**
                     const colunas = [
                         { text: 'Número de medições', style: 'dynamicText', fontSize: config.fontSize, bold: false },
                         { text: ':', style: 'dynamicText', alignment: 'center', fontSize: config.fontSize, bold: false },
-                        { text: `${ponto.medicoes.filter(m => m !== '').length}`, style: 'dynamicText', fontSize: config.fontSize, bold: false }
+                        { text: '10', style: 'dynamicText', fontSize: config.fontSize, bold: false } // Número fixo de medições
                     ];
 
                     if (idx < pontosNessaLinha.length - 1) {
@@ -899,7 +908,7 @@ export class PDFService {    /**
                     { text: `${ponto.volumeNominal}${ponto.unidade || 'µL'}\n`, style: 'dynamicText' },
 
                     { text: 'Número de medições        : ', style: 'staticText' },
-                    { text: `${ponto.medicoes.filter(m => m !== '').length}\n`, style: 'dynamicText' },
+                    { text: '10\n', style: 'dynamicText' }, // Número fixo de medições
 
                     { text: 'Média                                 : ', style: 'staticText' },
                     { text: `${ponto.media ? PDFService.formatarNumero(ponto.media) : '0,00'}${ponto.unidade || 'µL'}\n`, style: 'dynamicText' },
