@@ -999,15 +999,15 @@ export class PDFService {    /**
 
         // 6. CEP
         if (enderecoData.cep) {
-            if (enderecoFormatado) enderecoFormatado += ' - ';
-            // Formatar CEP com padrão brasileiro: CEP 00000-000
-            const cepFormatado = enderecoData.cep.replace(/\D/g, ''); // Remove caracteres não numéricos
-            if (cepFormatado.length === 8) {
-                enderecoFormatado += `CEP ${cepFormatado.slice(0, 5)}-${cepFormatado.slice(5)}`;
-            } else {
-                enderecoFormatado += `CEP ${enderecoData.cep}`;
-            }
-        }
+    // Remove caracteres não numéricos
+    const cepFormatado = enderecoData.cep.replace(/\D/g, '');
+    // Só adiciona CEP se tiver 8 dígitos
+    if (cepFormatado.length === 8) {
+        if (enderecoFormatado) enderecoFormatado += ' - ';
+        enderecoFormatado += `CEP ${cepFormatado.slice(0, 5)}-${cepFormatado.slice(5)}`;
+    }
+    // Se não houver CEP válido, não adiciona nada
+}
 
         return enderecoFormatado || 'Endereço não informado';
     }/**
