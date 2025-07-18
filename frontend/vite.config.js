@@ -6,6 +6,7 @@ import { resolve } from 'path'
 export default defineConfig({
     plugins: [react()],
     server: {
+        open: true,
         watch: {
             usePolling: true,
             interval: 100
@@ -21,7 +22,7 @@ export default defineConfig({
     },
     build: {
         outDir: 'dist',
-        sourcemap: false,
+        sourcemap: true,
         rollupOptions: {
             output: {
                 manualChunks: {
