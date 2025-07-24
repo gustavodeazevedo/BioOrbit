@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Save, ArrowLeft, Building, MapPin } from "lucide-react";
 import {
@@ -6,7 +6,6 @@ import {
   getClienteById,
   updateCliente,
 } from "../services/clienteService";
-import InputMask from "react-input-mask";
 
 // Constantes para cores e estilos
 const COLORS = {
@@ -58,8 +57,179 @@ const ERROR_MESSAGES = {
     bairro: "Bairro é obrigatório",
     cidade: "Cidade é obrigatória",
     estado: "Estado é obrigatório",
-    cep: "CEP é obrigatório",
   },
+};
+
+// Componentes de formulário movidos para fora para evitar re-criação
+const FormInput = ({
+  label,
+  name,
+  value,
+  placeholder,
+  type = "text",
+  required = false,
+  onChange,
+  validationErrors,
+  createFocusBlurHandlers,
+}) => {
+  const fieldName = name;
+  const hasError = validationErrors[fieldName];
+  const focusBlurHandlers = createFocusBlurHandlers(fieldName);
+
+  return (
+    <div>
+      <label
+        className="block text-sm font-medium mb-1"
+        style={{ color: COLORS.TEXT }}
+      >
+        {label}
+        {required && "*"}
+      </label>
+      <input
+        type={type}
+        name={name}
+        value={value}
+        onChange={onChange}
+        className={`w-full px-3 py-2 border rounded-md transition-colors ${
+          hasError ? "border-red-500" : "border-gray-300 focus:border-green-500"
+        } focus:outline-none`}
+        style={{
+          borderColor: hasError ? COLORS.BORDER_ERROR : COLORS.BORDER_DEFAULT,
+          color: COLORS.TEXT,
+        }}
+        placeholder={placeholder}
+        {...focusBlurHandlers}
+      />
+      {hasError && <p className="text-red-500 text-xs mt-1">{hasError}</p>}
+    </div>
+  );
+};
+
+const FormSelect = ({
+  label,
+  name,
+  value,
+  options,
+  required = false,
+  onChange,
+  validationErrors,
+  createFocusBlurHandlers,
+}) => {
+  const fieldName = name;
+  const hasError = validationErrors[fieldName];
+  const focusBlurHandlers = createFocusBlurHandlers(fieldName);
+
+  return (
+    <div>
+      <label
+        className="block text-sm font-medium mb-1"
+        style={{ color: COLORS.TEXT }}
+      >
+        {label}
+        {required && "*"}
+      </label>
+      <select
+        name={name}
+        value={value}
+        onChange={onChange}
+        className={`w-full px-3 py-2 border rounded-md transition-colors ${
+          hasError ? "border-red-500" : "border-gray-300 focus:border-green-500"
+        } focus:outline-none`}
+        style={{
+          borderColor: hasError ? COLORS.BORDER_ERROR : COLORS.BORDER_DEFAULT,
+          color: COLORS.TEXT,
+        }}
+        {...focusBlurHandlers}
+      >
+        <option value="">Selecione um estado</option>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      {hasError && <p className="text-red-500 text-xs mt-1">{hasError}</p>}
+    </div>
+  );
+};
+
+const FormInputMask = ({
+  label,
+  name,
+  value,
+  placeholder,
+  required = false,
+  onChange,
+  validationErrors,
+  createFocusBlurHandlers,
+}) => {
+  const inputRef = useRef(null);
+  const fieldName = name;
+  const hasError = validationErrors[fieldName];
+  const focusBlurHandlers = createFocusBlurHandlers(fieldName);
+
+  // Função para formatar CEP
+  const formatCEP = (inputValue) => {
+    // Remove tudo que não é dígito
+    let digits = inputValue.replace(/\D/g, "");
+
+    // Limita a 8 dígitos
+    if (digits.length > 8) {
+      digits = digits.substring(0, 8);
+    }
+
+    // Aplica a máscara 99999-999
+    if (digits.length > 5) {
+      return `${digits.substring(0, 5)}-${digits.substring(5)}`;
+    }
+
+    return digits;
+  };
+
+  const handleInputChange = (e) => {
+    const inputValue = e.target.value;
+    const formattedValue = formatCEP(inputValue);
+
+    // Cria um evento sintético com o valor formatado
+    const syntheticEvent = {
+      target: {
+        name: name,
+        value: formattedValue,
+      },
+    };
+
+    onChange(syntheticEvent);
+  };
+
+  return (
+    <div>
+      <label
+        className="block text-sm font-medium mb-1"
+        style={{ color: COLORS.TEXT }}
+      >
+        {label}
+        {required && "*"}
+      </label>
+      <input
+        ref={inputRef}
+        type="text"
+        name={name}
+        value={value}
+        onChange={handleInputChange}
+        className={`w-full px-3 py-2 border rounded-md transition-colors ${
+          hasError ? "border-red-500" : "border-gray-300 focus:border-green-500"
+        } focus:outline-none`}
+        style={{
+          borderColor: hasError ? COLORS.BORDER_ERROR : COLORS.BORDER_DEFAULT,
+          color: COLORS.TEXT,
+        }}
+        placeholder={placeholder}
+        maxLength={9} // 8 dígitos + 1 hífen
+        {...focusBlurHandlers}
+      />
+      {hasError && <p className="text-red-500 text-xs mt-1">{hasError}</p>}
+    </div>
+  );
 };
 
 const initialState = {
@@ -262,133 +432,6 @@ const ClienteFormPage = () => {
     </div>
   );
 
-  const FormInput = ({
-    label,
-    name,
-    value,
-    placeholder,
-    type = "text",
-    required = false,
-  }) => {
-    const fieldName = name;
-    const hasError = validationErrors[fieldName];
-    const focusBlurHandlers = createFocusBlurHandlers(fieldName);
-
-    return (
-      <div>
-        <label
-          className="block text-sm font-medium mb-1"
-          style={{ color: COLORS.TEXT }}
-        >
-          {label}
-          {required && "*"}
-        </label>
-        <input
-          type={type}
-          name={name}
-          value={value}
-          onChange={handleChange}
-          className={`w-full px-3 py-2 border rounded-md transition-colors ${
-            hasError
-              ? "border-red-500"
-              : "border-gray-300 focus:border-green-500"
-          } focus:outline-none`}
-          style={{
-            borderColor: hasError ? COLORS.BORDER_ERROR : COLORS.BORDER_DEFAULT,
-            color: COLORS.TEXT,
-          }}
-          placeholder={placeholder}
-          {...focusBlurHandlers}
-        />
-        {hasError && <p className="text-red-500 text-xs mt-1">{hasError}</p>}
-      </div>
-    );
-  };
-
-  const FormSelect = ({ label, name, value, options, required = false }) => {
-    const fieldName = name;
-    const hasError = validationErrors[fieldName];
-    const focusBlurHandlers = createFocusBlurHandlers(fieldName);
-
-    return (
-      <div>
-        <label
-          className="block text-sm font-medium mb-1"
-          style={{ color: COLORS.TEXT }}
-        >
-          {label}
-          {required && "*"}
-        </label>
-        <select
-          name={name}
-          value={value}
-          onChange={handleChange}
-          className={`w-full px-3 py-2 border rounded-md transition-colors ${
-            hasError
-              ? "border-red-500"
-              : "border-gray-300 focus:border-green-500"
-          } focus:outline-none`}
-          style={{
-            borderColor: hasError ? COLORS.BORDER_ERROR : COLORS.BORDER_DEFAULT,
-            color: COLORS.TEXT,
-          }}
-          {...focusBlurHandlers}
-        >
-          <option value="">Selecione um estado</option>
-          {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        {hasError && <p className="text-red-500 text-xs mt-1">{hasError}</p>}
-      </div>
-    );
-  };
-
-  const FormInputMask = ({
-    label,
-    name,
-    value,
-    mask,
-    placeholder,
-    required = false,
-  }) => {
-    const fieldName = name;
-    const hasError = validationErrors[fieldName];
-    const focusBlurHandlers = createFocusBlurHandlers(fieldName);
-
-    return (
-      <div>
-        <label
-          className="block text-sm font-medium mb-1"
-          style={{ color: COLORS.TEXT }}
-        >
-          {label}
-          {required && "*"}
-        </label>
-        <InputMask
-          mask={mask}
-          name={name}
-          value={value}
-          onChange={handleChange}
-          className={`w-full px-3 py-2 border rounded-md transition-colors ${
-            hasError
-              ? "border-red-500"
-              : "border-gray-300 focus:border-green-500"
-          } focus:outline-none`}
-          style={{
-            borderColor: hasError ? COLORS.BORDER_ERROR : COLORS.BORDER_DEFAULT,
-            color: COLORS.TEXT,
-          }}
-          placeholder={placeholder}
-          {...focusBlurHandlers}
-        />
-        {hasError && <p className="text-red-500 text-xs mt-1">{hasError}</p>}
-      </div>
-    );
-  };
-
   if (loading) {
     return <LoadingScreen />;
   }
@@ -458,6 +501,9 @@ const ClienteFormPage = () => {
               value={formData.nome}
               placeholder="Nome da empresa"
               required
+              onChange={handleChange}
+              validationErrors={validationErrors}
+              createFocusBlurHandlers={createFocusBlurHandlers}
             />
           </div>
 
@@ -476,6 +522,9 @@ const ClienteFormPage = () => {
                 value={formData.endereco.rua}
                 placeholder="Nome da rua"
                 required
+                onChange={handleChange}
+                validationErrors={validationErrors}
+                createFocusBlurHandlers={createFocusBlurHandlers}
               />
               <FormInput
                 label="Número"
@@ -483,6 +532,9 @@ const ClienteFormPage = () => {
                 value={formData.endereco.numero}
                 placeholder="123"
                 required
+                onChange={handleChange}
+                validationErrors={validationErrors}
+                createFocusBlurHandlers={createFocusBlurHandlers}
               />
               <FormInput
                 label="Bairro"
@@ -490,13 +542,18 @@ const ClienteFormPage = () => {
                 value={formData.endereco.bairro}
                 placeholder="Nome do bairro"
                 required
+                onChange={handleChange}
+                validationErrors={validationErrors}
+                createFocusBlurHandlers={createFocusBlurHandlers}
               />
               <FormInputMask
                 label="CEP"
                 name="endereco.cep"
                 value={formData.endereco.cep}
-                mask="99999-999"
                 placeholder="00000-000"
+                onChange={handleChange}
+                validationErrors={validationErrors}
+                createFocusBlurHandlers={createFocusBlurHandlers}
               />
               <FormInput
                 label="Cidade"
@@ -504,6 +561,9 @@ const ClienteFormPage = () => {
                 value={formData.endereco.cidade}
                 placeholder="Nome da cidade"
                 required
+                onChange={handleChange}
+                validationErrors={validationErrors}
+                createFocusBlurHandlers={createFocusBlurHandlers}
               />
               <FormSelect
                 label="Estado"
@@ -511,6 +571,9 @@ const ClienteFormPage = () => {
                 value={formData.endereco.estado}
                 options={ESTADOS_BRASIL}
                 required
+                onChange={handleChange}
+                validationErrors={validationErrors}
+                createFocusBlurHandlers={createFocusBlurHandlers}
               />
             </div>
           </div>
