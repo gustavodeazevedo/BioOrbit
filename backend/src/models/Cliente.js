@@ -47,8 +47,7 @@ const ClienteSchema = new mongoose.Schema({
         },
         cep: {
             type: String,
-            trim: true,
-            required: [true, 'CEP é obrigatório']
+            trim: true
         }
     },
     contato: {
