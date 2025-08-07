@@ -176,8 +176,8 @@ export class PDFService {    /**
                     margin: [0, 5, 0, 8]
                 }, {
                     text: [
-                        'Termohigrômetro Digital HT600 Instrutherm, Certificado RBC Nº CAL – C 15153/24, (Validade 08/2025).\n',
-                        'Balança Analítica Metter Toledo SAG250, Certificado RBC Nº CAL – A 15152/24, (Validade 08/2025).'
+                        'Termohigrômetro Digital HT600 Instrutherm, Certificado RBC Nº CAL – A 15694/25 , (Validade 08/2026).\n',
+                        'Balança Analítica Metter Toledo SAG250, Certificado RBC Nº CAL – A 15695/25, (Validade 08/2026).'
                     ],
                     style: 'normalText',
                     margin: [0, 0, 0, 15]
