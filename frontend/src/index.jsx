@@ -9,5 +9,6 @@ root.render(
   <React.StrictMode>
     <App />
     <SpeedInsights />
+    {/* Version update system initialized */}
   </React.StrictMode>
 );

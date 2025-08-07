@@ -16,9 +16,22 @@ import SelecionarClientePage from "./pages/SelecionarClientePage";
 import EmitirCertificadoPage from "./pages/EmitirCertificadoPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import HomeRedirect from "./components/HomeRedirect";
+import VersionUpdateNotification from "./components/VersionUpdateNotification";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import useVersionUpdate from "./hooks/useVersionUpdate";
 
 function App() {
+  // Hook for version update checking
+  const { 
+    isUpdateAvailable, 
+    currentVersion, 
+    newVersion, 
+    reloadApplication 
+  } = useVersionUpdate({
+    checkInterval: 5 * 60 * 1000, // Check every 5 minutes
+    autoStart: true
+  });
+
   return (
     <AuthProvider>
       <Router>
@@ -62,6 +75,14 @@ function App() {
             </Routes>
           </main>
         </div>
+
+        {/* Version Update Notification Modal */}
+        <VersionUpdateNotification
+          isVisible={isUpdateAvailable}
+          onReload={reloadApplication}
+          currentVersion={currentVersion}
+          newVersion={newVersion}
+        />
       </Router>
     </AuthProvider>
   );
