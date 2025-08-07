@@ -27,7 +27,7 @@ const DashboardPage = () => {
         <div className="dashboard-header">
           <h2 className="dashboard-title">BioOrbit</h2>
           <p className="dashboard-welcome">
-            Sistema de Calibração de Micropipetas
+            Sistema de Emissão de Certificados para Micropipetas
           </p>
         </div>
         {user && (
