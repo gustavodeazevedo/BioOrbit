@@ -26,6 +26,7 @@ app.use('/api/calibracoes', require('./routes/calibracoes'));
 app.use('/api/usuarios', require('./routes/usuarios'));
 app.use('/api/admin/token', require('./routes/token')); // Adicionando rotas de gerenciamento de token
 app.use('/api/clientes', require('./routes/clientes')); // Adicionando rotas de clientes
+app.use('/api/version', require('./routes/version')); // Adicionando rota de versão
 
 // Rota padrão
 app.get('/', (req, res) => {

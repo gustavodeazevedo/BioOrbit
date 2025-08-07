@@ -16,55 +16,61 @@ import SelecionarClientePage from "./pages/SelecionarClientePage";
 import EmitirCertificadoPage from "./pages/EmitirCertificadoPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import HomeRedirect from "./components/HomeRedirect";
+import UpdateNotification from "./components/UpdateNotification";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { VersionProvider } from "./contexts/VersionContext";
 
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <div className="min-h-screen bg-gray-50">
-          <main className="container mx-auto px-4 py-8">
-            <Routes>
-              <Route path="/" element={<HomeRedirect />} />
-              {/* Rotas públicas */}
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/registro" element={<RegisterPage />} />
-              <Route path="/recuperar-senha" element={<RecuperarSenhaPage />} />
-              <Route
-                path="/redefinir-senha/:token"
-                element={<RedefinirSenhaPage />}
-              />
-              {/* Rotas protegidas */}
-              <Route element={<ProtectedRoute />}>
-                <Route path="/dashboard" element={<DashboardPage />} />
-                {/* Rotas de clientes */}
-                <Route path="/clientes" element={<ClientesPage />} />
-                <Route path="/clientes/novo" element={<ClienteFormPage />} />
+      <VersionProvider>
+        <Router>
+          <div className="min-h-screen bg-gray-50">
+            <UpdateNotification />
+            <main className="container mx-auto px-4 py-8">
+              <Routes>
+                <Route path="/" element={<HomeRedirect />} />
+                {/* Rotas públicas */}
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/registro" element={<RegisterPage />} />
+                <Route path="/recuperar-senha" element={<RecuperarSenhaPage />} />
                 <Route
-                  path="/clientes/editar/:id"
-                  element={<ClienteFormPage />}
+                  path="/redefinir-senha/:token"
+                  element={<RedefinirSenhaPage />}
                 />
-                {/* Rotas de certificados */}
-                <Route
-                  path="/selecionar-cliente"
-                  element={<SelecionarClientePage />}
-                />{" "}
-                <Route
-                  path="/emitir-certificado/:id"
-                  element={<EmitirCertificadoPage />}
-                />
-                {/* Outras rotas protegidas serão adicionadas aqui */}
-              </Route>
-              {/* Rotas protegidas apenas para admin */}
-              <Route element={<ProtectedRoute adminOnly={true} />}>
-                {/* Outras rotas de admin serão adicionadas aqui */}
-              </Route>{" "}
-            </Routes>
-          </main>
-        </div>
-      </Router>
+                {/* Rotas protegidas */}
+                <Route element={<ProtectedRoute />}>
+                  <Route path="/dashboard" element={<DashboardPage />} />
+                  {/* Rotas de clientes */}
+                  <Route path="/clientes" element={<ClientesPage />} />
+                  <Route path="/clientes/novo" element={<ClienteFormPage />} />
+                  <Route
+                    path="/clientes/editar/:id"
+                    element={<ClienteFormPage />}
+                  />
+                  {/* Rotas de certificados */}
+                  <Route
+                    path="/selecionar-cliente"
+                    element={<SelecionarClientePage />}
+                  />{" "}
+                  <Route
+                    path="/emitir-certificado/:id"
+                    element={<EmitirCertificadoPage />}
+                  />
+                  {/* Outras rotas protegidas serão adicionadas aqui */}
+                </Route>
+                {/* Rotas protegidas apenas para admin */}
+                <Route element={<ProtectedRoute adminOnly={true} />}>
+                  {/* Outras rotas de admin serão adicionadas aqui */}
+                </Route>{" "}
+              </Routes>
+            </main>
+          </div>
+        </Router>
+      </VersionProvider>
     </AuthProvider>
   );
 }
 
 export default App;
+// Test change to trigger version update
