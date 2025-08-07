@@ -16,12 +16,14 @@ import SelecionarClientePage from "./pages/SelecionarClientePage";
 import EmitirCertificadoPage from "./pages/EmitirCertificadoPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import HomeRedirect from "./components/HomeRedirect";
+import UpdateNotification from './components/UpdateNotification';
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 
 function App() {
   return (
     <AuthProvider>
       <Router>
+        <UpdateNotification />
         <div className="min-h-screen bg-gray-50">
           <main className="container mx-auto px-4 py-8">
             <Routes>
