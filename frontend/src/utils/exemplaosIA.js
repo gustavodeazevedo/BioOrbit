@@ -8,6 +8,8 @@ VOLUME: 1000
 
 PONTOS DE INDICAÇÃO: 100-1000
 
+PONTOS CALIBRADOS: 200-1000
+
 SÉRIE: a12837b
 
 MARCA: gilson
@@ -22,7 +24,7 @@ PONTOS DE CALIBRAÇÃO:
 
 - 1000= 996.6, 995.1, 995.6, 995.3, 995.7
 - 500= 496.6, 496.1, 496.3, 496.5, 496.7
-- 100= 99.6, 99.63, 99.66, 99.68, 99.69`,
+- 200= 199.2, 199.3, 199.1, 199.4, 199.5`,
 
     // Formato para micropipeta multicanal
     FORMATO_MULTICANAL: `INSTRUMENTO: micropipeta multicanal
@@ -33,6 +35,8 @@ VOLUME: 1000
 
 PONTOS DE INDICAÇÃO: 100-1000
 
+PONTOS CALIBRADOS: 200-1000
+
 SÉRIE: a12837b
 
 MARCA: gilson
@@ -47,7 +51,7 @@ PONTOS DE CALIBRAÇÃO:
 
 - 1000= 996.6, 995.1, 995.6, 995.3, 995.7
 - 500= 496.6, 496.1, 496.3, 496.5, 496.7
-- 100= 99.6, 99.63, 99.66, 99.68, 99.69`,
+- 200= 199.2, 199.3, 199.1, 199.4, 199.5`,
 
     // Formato para repipetador
     FORMATO_REPIPETADOR: `INSTRUMENTO: repipetador
@@ -77,12 +81,13 @@ export const DICAS_IA = [
     "Para repipetadores, inclua a seção 'SERINGAS UTILIZADAS' e 'SERINGA DE XXXUL'",
     "Para multicanais, especifique o número de canais no campo 'Nº DE CANAIS'",
     "Os pontos de calibração devem começar com hífen (-) seguido do volume e sinal de igual (=)",
+    "Use 'PONTOS CALIBRADOS' para especificar a faixa realmente calibrada",
     "Medições podem estar vazias (só volume=) para preenchimento posterior"
 ];
 
 export const CAMPOS_OBRIGATORIOS = {
     TODOS: ['INSTRUMENTO', 'SÉRIE', 'MARCA', 'MODELO'],
-    MICROPIPETA: ['VOLUME', 'PONTOS DE INDICAÇÃO', 'PONTOS DE CALIBRAÇÃO'],
+    MICROPIPETA: ['VOLUME', 'PONTOS DE INDICAÇÃO', 'PONTOS CALIBRADOS', 'PONTOS DE CALIBRAÇÃO'],
     MULTICANAL: ['Nº DE CANAIS'],
     REPIPETADOR: ['SERINGAS UTILIZADAS']
 };
