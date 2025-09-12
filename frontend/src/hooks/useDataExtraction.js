@@ -181,6 +181,7 @@ export const useDataExtraction = () => {
             // Extrair campos básicos
             const volume = extractFieldValue(text, 'VOLUME');
             const pontosIndicacao = extractFieldValue(text, 'PONTOS DE INDICAÇÃO');
+            const pontosCalibirados = extractFieldValue(text, 'PONTOS CALIBRADOS');
             const serie = extractFieldValue(text, 'SÉRIE');
             const marca = extractFieldValue(text, 'MARCA');
             const modelo = extractFieldValue(text, 'MODELO');
@@ -190,6 +191,8 @@ export const useDataExtraction = () => {
             console.log('Valores extraídos:');
             console.log('numeroIdentificacao:', numeroIdentificacao);
             console.log('numeroOrdenacao:', numeroOrdenacao);
+            console.log('pontosIndicacao:', pontosIndicacao);
+            console.log('pontosCalibirados:', pontosCalibirados);
 
             // Validação básica apenas para verificar se os campos existem no texto
             // (Os campos podem ser N/A conforme os exemplos fornecidos)
@@ -224,7 +227,7 @@ export const useDataExtraction = () => {
                 unidadeCapacidade: 'µL',
                 faixaIndicacao: pontosIndicacao || '',
                 unidadeFaixaIndicacao: 'µL',
-                faixaCalibrada: pontosIndicacao || '',
+                faixaCalibrada: pontosCalibirados || pontosIndicacao || '', // Usa PONTOS CALIBRADOS quando disponível
                 unidadeFaixaCalibrada: 'µL'
             };
 
