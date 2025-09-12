@@ -1,0 +1,181 @@
+/* Estilos para o botão flutuante de IA - sempre visível */
+.ai-floating-button {
+  position: fixed !important;
+  bottom: 24px !important;
+  right: 24px !important;
+  z-index: 999999 !important;
+  pointer-events: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 64px !important;
+  height: 64px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(
+    45deg,
+    rgb(144, 199, 45) 0%,
+    rgb(80, 120, 20) 20%,
+    rgb(200, 255, 80) 40%,
+    rgb(60, 100, 15) 60%,
+    rgb(180, 240, 70) 80%,
+    rgb(144, 199, 45) 100%
+  ) !important;
+  background-size: 400% 400% !important;
+  animation: ai-gradient-flow 6s ease infinite !important;
+  box-shadow: 0 10px 25px rgba(144, 199, 45, 0.3), 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  border: none !important;
+  cursor: pointer !important;
+  transform: scale(1) !important;
+}
+
+.ai-floating-button:hover {
+  transform: scale(1.1) !important;
+  box-shadow: 0 20px 40px rgba(144, 199, 45, 0.4), 0 8px 16px rgba(0, 0, 0, 0.2) !important;
+  animation: ai-gradient-flow-fast 3.5s ease infinite !important;
+}
+
+.ai-floating-button:active {
+  transform: scale(1.05) !important;
+}
+
+/* Animação de gradiente em movimento - cria efeito moderno de cores fluindo */
+@keyframes ai-gradient-flow {
+  0% {
+    background-position: 0% 50%;
+    filter: brightness(1);
+  }
+  25% {
+    background-position: 50% 0%;
+    filter: brightness(1.2);
+  }
+  50% {
+    background-position: 100% 50%;
+    filter: brightness(0.9);
+  }
+  75% {
+    background-position: 50% 100%;
+    filter: brightness(1.1);
+  }
+  100% {
+    background-position: 0% 50%;
+    filter: brightness(1);
+  }
+}
+
+/* Animação mais rápida no hover - aumenta a dinâmica visual */
+@keyframes ai-gradient-flow-fast {
+  0% {
+    background-position: 0% 50%;
+    filter: brightness(1.1);
+  }
+  25% {
+    background-position: 50% 0%;
+    filter: brightness(1.3);
+  }
+  50% {
+    background-position: 100% 50%;
+    filter: brightness(0.8);
+  }
+  75% {
+    background-position: 50% 100%;
+    filter: brightness(1.2);
+  }
+  100% {
+    background-position: 0% 50%;
+    filter: brightness(1.1);
+  }
+}
+
+/* Chat container sempre visível */
+.ai-chat-container {
+  position: fixed !important;
+  bottom: 24px !important;
+  right: 24px !important;
+  z-index: 999999 !important;
+  pointer-events: auto !important;
+}
+
+/* Animação de pulso customizada */
+@keyframes ai-pulse {
+  0%,
+  100% {
+    box-shadow: 0 10px 25px rgba(144, 199, 45, 0.3),
+      0 0 0 0 rgba(144, 199, 45, 0.7), 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  50% {
+    box-shadow: 0 10px 25px rgba(144, 199, 45, 0.3),
+      0 0 0 10px rgba(144, 199, 45, 0), 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.ai-floating-button.pulse {
+  animation: ai-gradient-flow 6s ease infinite, ai-pulse 4s infinite !important;
+}
+
+/* Garantir que o botão fique sempre visível em qualquer resolução */
+@media (max-width: 768px) {
+  .ai-floating-button {
+    bottom: 20px !important;
+    right: 20px !important;
+    width: 56px !important;
+    height: 56px !important;
+    /* Animação mais sutil em mobile para economizar bateria */
+    animation: ai-gradient-flow 8s ease infinite !important;
+  }
+
+  .ai-floating-button:hover {
+    animation: ai-gradient-flow 5s ease infinite !important;
+  }
+
+  .ai-floating-button.pulse {
+    animation: ai-gradient-flow 8s ease infinite, ai-pulse 5s infinite !important;
+  }
+
+  .ai-chat-container {
+    bottom: 20px !important;
+    right: 20px !important;
+    width: calc(100vw - 40px) !important;
+    max-width: 380px !important;
+  }
+}
+
+/* Sobrepor qualquer estilo que possa interferir */
+.ai-floating-button * {
+  pointer-events: none !important;
+}
+
+.ai-floating-button svg {
+  color: white !important;
+  width: 24px !important;
+  height: 24px !important;
+}
+
+/* Estilos customizados para o tooltip do botão IA - igual às seções */
+.ai-floating-button .absolute.bottom-full {
+  background: white !important;
+  color: rgb(75, 85, 99) !important;
+  border: 1px solid rgb(229, 231, 235) !important;
+  border-radius: 0.375rem !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+  font-weight: 500 !important;
+  font-size: 0.875rem !important;
+  z-index: 1000000 !important;
+  animation: none !important;
+}
+
+/* Seta do tooltip - igual às bordas das seções */
+.ai-floating-button .absolute.top-full {
+  border-top-color: rgb(229, 231, 235) !important;
+  animation: none !important;
+}
+
+/* Garantir que o tooltip e todos seus elementos não tenham animação */
+.ai-floating-button.pulse .absolute.bottom-full,
+.ai-floating-button.pulse .absolute.bottom-full *,
+.ai-floating-button.pulse .absolute.top-full {
+  animation: none !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+}

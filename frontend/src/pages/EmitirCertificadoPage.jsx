@@ -32,6 +32,7 @@ import ActionButton from "../components/ActionButton";
 import InfoBanner from "../components/InfoBanner";
 import RadioGroup from "../components/RadioGroup";
 import SectionCard from "../components/SectionCard";
+import AIChatAssistant from "../components/AIChatAssistant";
 import { getClienteById } from "../services/clienteService";
 import { formatNumberInput, formatTemperature } from "../utils/formatUtils";
 import { PDFService } from "../services/pdfService";
@@ -277,9 +278,10 @@ const EmitirCertificadoPage = () => {
     }
   };
   // Função para reorganizar pontos para layout multicanal
-  const reorganizarPontosParaMulticanal = () => {
-    // Usar a quantidade de canais selecionada pelo usuário
-    const novosCanais = quantidadeCanais; // 8 ou 12 canais conforme seleção
+  const reorganizarPontosParaMulticanal = (canaisCustomizados = null) => {
+    // Usar a quantidade de canais customizada ou a selecionada pelo usuário
+    const novosCanais = canaisCustomizados || quantidadeCanais; // 8 ou 12 canais conforme seleção
+    console.log("🔄 Reorganizando pontos para", novosCanais, "canais");
     const novosPontos = [];
 
     for (let canal = 1; canal <= novosCanais; canal++) {
@@ -351,28 +353,7 @@ const EmitirCertificadoPage = () => {
 
     // Se já estiver em modo multicanal, reorganiza os pontos com a nova quantidade
     if (formData.tipoInstrumento === "multicanal") {
-      const novosPontos = [];
-
-      for (let canal = 1; canal <= novaQuantidade; canal++) {
-        for (let ponto = 1; ponto <= pontosPorCanal; ponto++) {
-          novosPontos.push({
-            id: Date.now() + canal * 100 + ponto,
-            volumeNominal: "",
-            unidade: "µL",
-            medicoes: Array(10).fill(""),
-            valoresTexto: "",
-            media: null,
-            mediaMassa: null,
-            inexatidao: null,
-            inexatidaoPercentual: null,
-            desvioPadrao: null,
-            canal: canal,
-            pontoPosicao: ponto,
-          });
-        }
-      }
-      setPontosCalibra(novosPontos);
-      setNumeroCanais(novaQuantidade);
+      reorganizarPontosParaMulticanal(novaQuantidade);
     }
   };
 
@@ -594,6 +575,253 @@ const EmitirCertificadoPage = () => {
       );
     }
   };
+
+  // Função para disparar automação após preenchimento da IA
+  const triggerAutomacaoParaIA = (pontosIA) => {
+    setAutoPreenchimento({
+      ativo: true,
+      mensagem: `Preenchendo automaticamente outros canais com valores próximos...`,
+    });
+
+    setTimeout(() => {
+      setPontosCalibra((prevPontos) => {
+        return prevPontos.map((ponto) => {
+          // Se não for Canal 1, propagar valores do Canal 1 correspondente
+          if (ponto.canal !== 1) {
+            // Encontrar o ponto correspondente no Canal 1
+            const pontoCanalMestre = prevPontos.find(
+              (p) => p.canal === 1 && p.pontoPosicao === ponto.pontoPosicao
+            );
+
+            if (pontoCanalMestre && pontoCanalMestre.valoresTexto) {
+              // Gerar valores próximos baseados no Canal Mestre
+              const valoresArray = pontoCanalMestre.valoresTexto
+                .split(",")
+                .map((v) => v.trim())
+                .filter((v) => v && !isNaN(parseFloat(v)));
+
+              if (valoresArray.length > 0) {
+                const novosMedicoes = Array(10).fill("");
+                const novosValoresTexto = [];
+
+                valoresArray.forEach((valor, index) => {
+                  if (index < 10) {
+                    const valorProximo = gerarValoresProximos(valor);
+                    novosMedicoes[index] = valorProximo;
+                    if (valorProximo !== "") {
+                      novosValoresTexto.push(valorProximo);
+                    }
+                  }
+                });
+
+                return {
+                  ...ponto,
+                  volumeNominal: pontoCanalMestre.volumeNominal, // Mesmo volume nominal
+                  medicoes: novosMedicoes,
+                  valoresTexto: novosValoresTexto.join(", "),
+                };
+              }
+            }
+          }
+          return ponto;
+        });
+      });
+
+      // Esconder notificação após 2 segundos
+      setTimeout(() => {
+        setAutoPreenchimento({ ativo: false, mensagem: "" });
+      }, 2000);
+    }, 100);
+  };
+
+  // Função para processar dados extraídos pela IA
+  const handleDataExtracted = (extractedData) => {
+    // Concatenar número de ordenação ao número de certificado existente
+    const numeroCertificadoFinal = extractedData.numeroCertificado
+      ? `${formData.numeroCertificado}${extractedData.numeroCertificado}`
+      : formData.numeroCertificado;
+
+    // Atualizar dados do formulário
+    setFormData((prev) => ({
+      ...prev,
+      tipoEquipamento: extractedData.tipoEquipamento,
+      tipoInstrumento: extractedData.tipoInstrumento,
+      marcaPipeta: extractedData.marcaPipeta,
+      modeloPipeta: extractedData.modeloPipeta,
+      numeroPipeta: extractedData.numeroPipeta,
+      numeroIdentificacao: extractedData.numeroIdentificacao,
+      numeroCertificado: numeroCertificadoFinal,
+      capacidade: extractedData.capacidade,
+      unidadeCapacidade: extractedData.unidadeCapacidade,
+      faixaIndicacao: extractedData.faixaIndicacao,
+      unidadeFaixaIndicacao: extractedData.unidadeFaixaIndicacao,
+      faixaCalibrada: extractedData.faixaCalibrada,
+      unidadeFaixaCalibrada: extractedData.unidadeFaixaCalibrada,
+      // Para multicanal, incluir também a quantidade de canais
+      quantidadeCanais:
+        extractedData.tipoInstrumento === "multicanal"
+          ? extractedData.quantidadeCanais
+          : prev.quantidadeCanais,
+    }));
+
+    // Atualizar pontos de calibração
+    setPontosCalibra(extractedData.pontosCalibra);
+
+    // Para multicanal, atualizar número de canais e reorganizar pontos
+    if (
+      extractedData.tipoInstrumento === "multicanal" &&
+      extractedData.quantidadeCanais
+    ) {
+      console.log(
+        "🔧 IA detectou multicanal com canais:",
+        extractedData.quantidadeCanais
+      );
+      setNumeroCanais(extractedData.quantidadeCanais);
+      setQuantidadeCanais(extractedData.quantidadeCanais); // Também atualizar a quantidade de canais disponível
+
+      // Aguardar um tick para garantir que o número de canais seja atualizado primeiro
+      setTimeout(() => {
+        // Reorganizar pontos para multicanal (cria estrutura para todos os canais)
+        reorganizarPontosParaMulticanal(extractedData.quantidadeCanais);
+
+        // Depois aplicar os dados do Canal Mestre extraídos pela IA
+        setTimeout(() => {
+          console.log(
+            "📊 Pontos criados para",
+            extractedData.quantidadeCanais,
+            "canais"
+          );
+          setPontosCalibra((prevPontos) => {
+            const pontosAtualizados = prevPontos.map((ponto) => {
+              // Encontrar ponto correspondente no Canal 1 (Canal Mestre)
+              if (ponto.canal === 1) {
+                const pontoIA = extractedData.pontosCalibra.find(
+                  (p) =>
+                    p.volumeNominal === ponto.volumeNominal ||
+                    p.pontoPosicao === ponto.pontoPosicao
+                );
+                if (pontoIA) {
+                  return {
+                    ...ponto,
+                    volumeNominal: pontoIA.volumeNominal,
+                    medicoes: pontoIA.medicoes,
+                    valoresTexto: pontoIA.valoresTexto,
+                  };
+                }
+              }
+              return ponto;
+            });
+            return pontosAtualizados;
+          });
+
+          // Disparar automação para propagar dados do Canal Mestre para outros canais
+          setTimeout(() => {
+            if (automacaoHabilitada) {
+              triggerAutomacaoParaIA(extractedData.pontosCalibra);
+            }
+          }, 150);
+        }, 100);
+      }, 50);
+    }
+
+    // Atualizar seringas para repipetador (se aplicável)
+    if (extractedData.seringas && extractedData.seringas.length > 0) {
+      setSeringas(extractedData.seringas);
+    }
+
+    // Mostrar notificação de sucesso
+    let mensagem = `Dados extraídos com sucesso! ${extractedData.pontosCalibra.length} ponto(s) de calibração preenchido(s) automaticamente.`;
+
+    if (extractedData.seringas && extractedData.seringas.length > 0) {
+      mensagem += ` ${extractedData.seringas.length} seringa(s) adicionada(s).`;
+    }
+
+    setAutoPreenchimento({
+      ativo: true,
+      mensagem: mensagem,
+    });
+
+    // Esconder notificação após 3 segundos
+    setTimeout(() => {
+      setAutoPreenchimento({ ativo: false, mensagem: "" });
+    }, 3000);
+  };
+
+  // Função para limpar dados ao editar (mantém apenas campos específicos)
+  const handleEditarDados = () => {
+    // Limpar número do certificado mantendo apenas números antes do ponto + ponto
+    let numeroCertificadoLimpo = formData.numeroCertificado;
+    if (numeroCertificadoLimpo.includes(".")) {
+      // Pega apenas a parte antes do ponto e adiciona o ponto
+      const parteAntesPonto = numeroCertificadoLimpo.split(".")[0];
+      numeroCertificadoLimpo = parteAntesPonto + ".";
+    }
+
+    // Preservar apenas: numeroCertificado (limpo), dataCalibracao, temperatura, umidadeRelativa
+    const camposPreservados = {
+      numeroCertificado: numeroCertificadoLimpo,
+      dataCalibracao: formData.dataCalibracao,
+      temperatura: formData.temperatura,
+      umidadeRelativa: formData.umidadeRelativa,
+    };
+
+    // Resetar formData mantendo apenas os campos preservados
+    setFormData({
+      numeroCertificado: camposPreservados.numeroCertificado,
+      dataCalibracao: camposPreservados.dataCalibracao,
+      tipoEquipamento: "micropipeta",
+      marcaPipeta: "",
+      modeloPipeta: "",
+      numeroPipeta: "",
+      numeroIdentificacao: "",
+      capacidade: "",
+      unidadeCapacidade: "µL",
+      faixaIndicacao: "",
+      unidadeFaixaIndicacao: "µL",
+      faixaCalibrada: "",
+      unidadeFaixaCalibrada: "µL",
+      tipoInstrumento: "monocanal",
+      quantidadeCanais: 8,
+      temperatura: camposPreservados.temperatura,
+      umidadeRelativa: camposPreservados.umidadeRelativa,
+      equipamentoReferencia: {
+        balanca: "Mettler Toledo XS105",
+        termometro: "Minipa MT-241",
+        higrometro: "Minipa MT-241",
+      },
+      metodologia: "ISO 8655",
+      validadeCalibracao: "12",
+      condicoesAmbientaisControladas: true,
+    });
+
+    // Resetar pontos de calibração
+    setPontosCalibra([
+      {
+        id: 1,
+        volumeNominal: "",
+        unidade: "µL",
+        medicoes: Array(10).fill(""),
+        valoresTexto: "",
+        media: null,
+        mediaMassa: null,
+        inexatidao: null,
+        inexatidaoPercentual: null,
+        desvioPadrao: null,
+      },
+    ]);
+
+    // Resetar seringas
+    setSeringas([]);
+
+    // Resetar outros estados
+    setNumeroCanais(1);
+    setQuantidadeCanais(8);
+    setPontosPorCanal(3);
+
+    // Voltar para o modo de edição
+    setCertificadoGerado(false);
+  };
+
   // Função para remover um ponto de calibração
   const removerPontoCalibracao = (id) => {
     if (formData.tipoInstrumento === "multicanal") {
@@ -1514,14 +1742,14 @@ const EmitirCertificadoPage = () => {
       >
         {/* Header apenas para formulário de emissão */}
         {!certificadoGerado && (
-          <div className="flex justify-between items-center mb-6">
+          <div className="relative mb-6">
             <button
-              className="flex items-center hover:opacity-80"
+              className="absolute left-0 top-1/2 transform -translate-y-1/2 flex items-center hover:opacity-80"
               style={{ color: "rgb(144, 199, 45)" }}
               onClick={() => navigate("/selecionar-cliente")}
             >
               <ArrowLeft className="mr-2" /> Voltar
-            </button>{" "}
+            </button>
             <h1
               className="text-2xl font-bold text-center py-2 px-4 rounded-lg"
               style={{
@@ -1530,7 +1758,6 @@ const EmitirCertificadoPage = () => {
             >
               Emissão de Certificado
             </h1>
-            <div>{/* Espaço para equilibrar o layout */}</div>
           </div>
         )}
         {/* Notificação de automação */}
@@ -1539,7 +1766,7 @@ const EmitirCertificadoPage = () => {
             <Calculator className="mr-2" />
             {autoPreenchimento.mensagem}
           </div>
-        )}{" "}
+        )}
         {certificadoGerado ? (
           <div className="bg-white p-4">
             <div className="max-w-4xl mx-auto">
@@ -1726,7 +1953,7 @@ const EmitirCertificadoPage = () => {
               {/* Botões Secundários */}
               <div className="flex justify-center gap-4">
                 <ActionButton
-                  onClick={() => setCertificadoGerado(false)}
+                  onClick={handleEditarDados}
                   variant="outline"
                   size="md"
                   className="px-6"
@@ -2938,6 +3165,12 @@ const EmitirCertificadoPage = () => {
             </div>
           </form>
         )}
+        {/* Componente de IA para extração de dados */}
+        {/* Assistente IA Chat - apenas na tela de preenchimento */}
+        <AIChatAssistant
+          onDataExtracted={handleDataExtracted}
+          showInCurrentPage={!certificadoGerado}
+        />
       </div>
     </div>
   );
