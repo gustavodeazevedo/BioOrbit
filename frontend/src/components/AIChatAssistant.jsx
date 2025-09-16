@@ -111,7 +111,12 @@ const AIChatAssistant = ({ onDataExtracted, showInCurrentPage = true }) => {
           "assistant",
           "🎉 Formulário preenchido com sucesso! Você pode revisar os dados e gerar o certificado."
         );
-      }, 1500);
+
+        // Fechar o chat automaticamente após o processamento
+        setTimeout(() => {
+          setIsOpen(false);
+        }, 800); // Reduzido para 800ms para fechamento mais rápido
+      }, 1000); // Reduzido para 1 segundo
     } catch (err) {
       // Remover mensagem de processamento
       setMessages((prev) => prev.filter((m) => m.id !== processingMessage.id));

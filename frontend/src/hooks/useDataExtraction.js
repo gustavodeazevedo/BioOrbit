@@ -215,6 +215,16 @@ export const useDataExtraction = () => {
                 return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
             };
 
+            // Função específica para processar números (não aplica transformações de texto)
+            const processNumber = (value, defaultValue = '') => {
+                if (!value || value === '') return defaultValue;
+                if (value === 'N/A') return 'N/A';
+                // Remove caracteres especiais indesejados e mantém apenas números, pontos e hífens
+                // Remove especificamente ** que pode aparecer por formatação de markdown
+                let cleanValue = value.replace(/\*\*/g, '').replace(/[^\d.-]/g, '');
+                return cleanValue;
+            };
+
             let extractedData = {
                 tipoEquipamento,
                 tipoInstrumento,
@@ -222,7 +232,7 @@ export const useDataExtraction = () => {
                 modeloPipeta: processField(modelo),
                 numeroPipeta: processField(serie),
                 numeroIdentificacao: processField(numeroIdentificacao, 'N/A'),
-                numeroCertificado: processField(numeroOrdenacao), // Número de ordenação vai para o campo Número do Certificado
+                numeroCertificado: processNumber(numeroOrdenacao), // Usar processNumber para não aplicar transformações de texto
                 capacidade: volume || '',
                 unidadeCapacidade: 'µL',
                 faixaIndicacao: pontosIndicacao || '',
