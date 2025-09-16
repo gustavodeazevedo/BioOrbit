@@ -53,6 +53,27 @@ PONTOS DE CALIBRAÇÃO:
 - 500= 496.6, 496.1, 496.3, 496.5, 496.7
 - 200= 199.2, 199.3, 199.1, 199.4, 199.5`,
 
+    // Formato para bureta (sempre monocanal)
+    FORMATO_BURETA: `INSTRUMENTO: bureta monocanal
+
+SÉRIE: BT2024001
+
+MARCA: BureTech
+
+MODELO: Digital Pro 25
+
+VOLUME: 25mL
+
+PONTOS DE INDICAÇÃO: 25mL a 2,5mL
+
+PONTOS CALIBRADOS: 25mL a 2,5mL
+
+PONTOS DE CALIBRAÇÃO:
+
+- 25= 24.98, 24.97, 24.99, 24.96, 24.98
+- 15= 14.97, 14.98, 14.99, 14.96, 14.97
+- 5= 4.98, 4.99, 4.97, 4.98, 4.99`,
+
     // Formato para repipetador
     FORMATO_REPIPETADOR: `INSTRUMENTO: repipetador
 
@@ -77,7 +98,8 @@ SERINGA DE 1250UL:
 
 export const DICAS_IA = [
     "Use EXATAMENTE o formato padronizado do Notion para melhor precisão",
-    "Todos os campos em MAIÚSCULAS devem ser mantidos como mostrado nos exemplos",
+    "Todos os campos em MAIÚSCULAS devem ser mantidos como mostrados nos exemplos",
+    "Para buretas, use sempre 'bureta monocanal' - buretas são SEMPRE monocanais",
     "Para repipetadores, inclua a seção 'SERINGAS UTILIZADAS' e 'SERINGA DE XXXUL'",
     "Para multicanais, especifique o número de canais no campo 'Nº DE CANAIS'",
     "Os pontos de calibração devem começar com hífen (-) seguido do volume e sinal de igual (=)",
@@ -88,6 +110,7 @@ export const DICAS_IA = [
 export const CAMPOS_OBRIGATORIOS = {
     TODOS: ['INSTRUMENTO', 'SÉRIE', 'MARCA', 'MODELO'],
     MICROPIPETA: ['VOLUME', 'PONTOS DE INDICAÇÃO', 'PONTOS CALIBRADOS', 'PONTOS DE CALIBRAÇÃO'],
+    BURETA: ['VOLUME', 'PONTOS DE INDICAÇÃO', 'PONTOS CALIBRADOS', 'PONTOS DE CALIBRAÇÃO'],
     MULTICANAL: ['Nº DE CANAIS'],
     REPIPETADOR: ['SERINGAS UTILIZADAS']
 };

@@ -474,7 +474,7 @@ export class PDFService {    /**
                     { text: `${enderecoCompleto.toUpperCase()}\n`, style: 'dynamicText' },
 
                     { text: 'INSTRUMENTO: ', style: 'staticText' },
-                    { text: `${isRepipetador ? 'REPIPETADOR' : `MICROPIPETA ${dadosCertificado.tipoInstrumento === 'monocanal' ? 'MONOCANAL' : 'MULTICANAL'}`}\n`, style: 'dynamicText' }, ...(isRepipetador ? [] : [
+                    { text: `${isRepipetador ? 'REPIPETADOR' : dadosCertificado.tipoEquipamento === 'bureta' ? 'BURETA' : `MICROPIPETA ${dadosCertificado.tipoInstrumento === 'monocanal' ? 'MONOCANAL' : 'MULTICANAL'}`}\n`, style: 'dynamicText' }, ...(isRepipetador ? [] : [
                         { text: 'FAIXA DE INDICAÇÃO: ', style: 'staticText' },
                         { text: `${dadosCertificado.faixaIndicacao ? dadosCertificado.faixaIndicacao + dadosCertificado.unidadeFaixaIndicacao : dadosCertificado.capacidade + dadosCertificado.unidadeCapacidade}\n`, style: 'dynamicText' },
 
@@ -999,15 +999,15 @@ export class PDFService {    /**
 
         // 6. CEP
         if (enderecoData.cep) {
-    // Remove caracteres não numéricos
-    const cepFormatado = enderecoData.cep.replace(/\D/g, '');
-    // Só adiciona CEP se tiver 8 dígitos
-    if (cepFormatado.length === 8) {
-        if (enderecoFormatado) enderecoFormatado += ' - ';
-        enderecoFormatado += `CEP ${cepFormatado.slice(0, 5)}-${cepFormatado.slice(5)}`;
-    }
-    // Se não houver CEP válido, não adiciona nada
-}
+            // Remove caracteres não numéricos
+            const cepFormatado = enderecoData.cep.replace(/\D/g, '');
+            // Só adiciona CEP se tiver 8 dígitos
+            if (cepFormatado.length === 8) {
+                if (enderecoFormatado) enderecoFormatado += ' - ';
+                enderecoFormatado += `CEP ${cepFormatado.slice(0, 5)}-${cepFormatado.slice(5)}`;
+            }
+            // Se não houver CEP válido, não adiciona nada
+        }
 
         return enderecoFormatado || 'Endereço não informado';
     }/**
