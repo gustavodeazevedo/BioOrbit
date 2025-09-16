@@ -65,7 +65,7 @@ const EmitirCertificadoPage = () => {
   const [formData, setFormData] = useState({
     numeroCertificado: "",
     dataCalibracao: "",
-    tipoEquipamento: "micropipeta", // Tipo de equipamento (micropipeta/repipetador)
+    tipoEquipamento: "micropipeta", // Tipo de equipamento (micropipeta/bureta/repipetador)
     marcaPipeta: "",
     modeloPipeta: "",
     numeroPipeta: "",
@@ -255,6 +255,12 @@ const EmitirCertificadoPage = () => {
         novoFormData.unidadeFaixaIndicacao = "µL";
         novoFormData.faixaCalibrada = "";
         novoFormData.unidadeFaixaCalibrada = "µL";
+        // Reorganiza pontos para monocanal se necessário
+        reorganizarPontosParaMonocanal();
+      } else if (value === "bureta") {
+        // Se mudou para bureta, força tipo de instrumento como monocanal (buretas são sempre monocanais)
+        novoFormData.tipoInstrumento = "monocanal";
+        novoFormData.quantidadeCanais = 1;
         // Reorganiza pontos para monocanal se necessário
         reorganizarPontosParaMonocanal();
       }
@@ -2307,6 +2313,8 @@ const EmitirCertificadoPage = () => {
                 Dados{" "}
                 {formData.tipoEquipamento === "micropipeta"
                   ? "da Micropipeta"
+                  : formData.tipoEquipamento === "bureta"
+                  ? "da Bureta"
                   : "do Repipetador"}
               </h3>{" "}
               {/* Seletor de tipo de equipamento */}
@@ -2323,6 +2331,10 @@ const EmitirCertificadoPage = () => {
                     label: "Micropipeta",
                   },
                   {
+                    value: "bureta",
+                    label: "Bureta",
+                  },
+                  {
                     value: "repipetador",
                     label: "Repipetador",
                   },
@@ -2334,6 +2346,8 @@ const EmitirCertificadoPage = () => {
                   label={`Marca ${
                     formData.tipoEquipamento === "micropipeta"
                       ? "da Pipeta"
+                      : formData.tipoEquipamento === "bureta"
+                      ? "da Bureta"
                       : "do Repipetador"
                   }`}
                   name="marcaPipeta"
@@ -2357,6 +2371,8 @@ const EmitirCertificadoPage = () => {
                   placeholder={
                     formData.tipoEquipamento === "micropipeta"
                       ? "Ex: P1000, Research Plus, etc."
+                      : formData.tipoEquipamento === "bureta"
+                      ? "Ex: B25, B50, Bureta Digital, etc."
                       : "Ex: Multipette E3x, Repeater M4, etc."
                   }
                 />{" "}
@@ -2364,6 +2380,8 @@ const EmitirCertificadoPage = () => {
                   label={`Número/Série ${
                     formData.tipoEquipamento === "micropipeta"
                       ? "da Pipeta"
+                      : formData.tipoEquipamento === "bureta"
+                      ? "da Bureta"
                       : "do Repipetador"
                   }`}
                   name="numeroPipeta"
@@ -2378,8 +2396,9 @@ const EmitirCertificadoPage = () => {
                   onChange={handleChange}
                   placeholder="Ex: ID001, BIO123, etc. (opcional)"
                 />{" "}
-                {/* Campo Volume - apenas para micropipetas */}
-                {formData.tipoEquipamento === "micropipeta" && (
+                {/* Campo Volume - apenas para micropipetas e buretas */}
+                {(formData.tipoEquipamento === "micropipeta" ||
+                  formData.tipoEquipamento === "bureta") && (
                   <VolumeInput
                     label="Volume"
                     volumeName="capacidade"
@@ -2497,8 +2516,9 @@ const EmitirCertificadoPage = () => {
                     )}
                   </div>
                 )}{" "}
-                {/* Campos Faixa de Indicação e Faixa Calibrada - apenas para micropipetas */}
-                {formData.tipoEquipamento === "micropipeta" && (
+                {/* Campos Faixa de Indicação e Faixa Calibrada - apenas para micropipetas e buretas */}
+                {(formData.tipoEquipamento === "micropipeta" ||
+                  formData.tipoEquipamento === "bureta") && (
                   <>
                     <VolumeInput
                       label="Faixa de Indicação"

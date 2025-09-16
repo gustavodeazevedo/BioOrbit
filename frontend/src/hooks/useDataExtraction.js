@@ -35,6 +35,8 @@ export const useDataExtraction = () => {
             return { tipoEquipamento: 'micropipeta', tipoInstrumento: 'multicanal' };
         } else if (instrumentoValue.toLowerCase().includes('monocanal')) {
             return { tipoEquipamento: 'micropipeta', tipoInstrumento: 'monocanal' };
+        } else if (instrumentoValue.toLowerCase().includes('bureta')) {
+            return { tipoEquipamento: 'bureta', tipoInstrumento: 'monocanal' };
         } else if (instrumentoValue.toLowerCase().includes('repipetador')) {
             return { tipoEquipamento: 'repipetador', tipoInstrumento: 'monocanal' };
         }
@@ -250,7 +252,7 @@ export const useDataExtraction = () => {
                 extractedData.seringas = seringas;
                 extractedData.pontosCalibra = []; // Para repipetador, os pontos ficam nas seringas
             } else {
-                // Para micropipetas, extrair pontos de calibração
+                // Para micropipetas e buretas, extrair pontos de calibração
                 const pontos = extractCalibrationPoints(text);
                 if (pontos.length === 0) {
                     throw new Error('Nenhum ponto de calibração encontrado. Verifique a seção "PONTOS DE CALIBRAÇÃO".');
