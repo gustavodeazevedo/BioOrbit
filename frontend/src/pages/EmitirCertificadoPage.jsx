@@ -33,11 +33,14 @@ import InfoBanner from "../components/InfoBanner";
 import RadioGroup from "../components/RadioGroup";
 import SectionCard from "../components/SectionCard";
 import AIChatAssistant from "../components/AIChatAssistant";
+import AIAnimationControls from "../components/AIAnimationControls";
+import useAnimatedInput from "../hooks/useAnimatedInput";
 import { getClienteById } from "../services/clienteService";
 import { formatNumberInput, formatTemperature } from "../utils/formatUtils";
 import { PDFService } from "../services/pdfService";
 import "../styles/AutomationButton.css";
 import "../styles/AIAnimations.css";
+import "../styles/AIAnimatedInputs.css";
 import {
   Stepper,
   StepperDescription,
@@ -125,6 +128,21 @@ const EmitirCertificadoPage = () => {
 
   // Estado para exibir/esconder a seção de cálculos
   const [mostrarCalculos, setMostrarCalculos] = useState(false);
+
+  // Hook para animação de inputs
+  const {
+    isAnimating,
+    currentField,
+    animationSpeed,
+    setAnimationSpeed,
+    executeAnimationSequence,
+    animateButtonClick,
+    stopAnimation,
+    cleanup,
+  } = useAnimatedInput();
+
+  // Estado para controlar o progresso da animação
+  const [animationProgress, setAnimationProgress] = useState(0);
 
   // Tabela de referência mais precisa para o fator Z baseado na temperatura com incrementos de 0.5°C
   const tabelaFatorZ = {
@@ -323,6 +341,13 @@ const EmitirCertificadoPage = () => {
       reorganizarPontosParaMulticanal();
     }
   }, [pontosPorCanal]);
+
+  // Cleanup da animação quando o componente for desmontado
+  useEffect(() => {
+    return () => {
+      cleanup();
+    };
+  }, [cleanup]);
   // Função para reorganizar pontos para layout monocanal
   const reorganizarPontosParaMonocanal = () => {
     // Volta ao layout padrão com um ponto
@@ -635,12 +660,127 @@ const EmitirCertificadoPage = () => {
   };
 
   // Função para processar dados extraídos pela IA
-  const handleDataExtracted = (extractedData) => {
+  const handleDataExtracted = async (extractedData) => {
+    // Se a animação estiver desabilitada, usar método antigo
+    if (isAnimating) {
+      stopAnimation();
+      return;
+    }
+
+    // Preparar dados para animação
+    const fieldsToAnimate = [];
+
     // Concatenar número de ordenação ao número de certificado existente
     const numeroCertificadoFinal = extractedData.numeroCertificado
       ? `${formData.numeroCertificado}${extractedData.numeroCertificado}`
       : formData.numeroCertificado;
 
+    // Mapear campos básicos para animação
+    const fieldMappings = [
+      {
+        selector: 'select[name="tipoEquipamento"]',
+        value: extractedData.tipoEquipamento,
+        name: "Tipo de Equipamento",
+      },
+      {
+        selector: 'select[name="tipoInstrumento"]',
+        value: extractedData.tipoInstrumento,
+        name: "Tipo de Instrumento",
+      },
+      {
+        selector: 'input[name="marcaPipeta"]',
+        value: extractedData.marcaPipeta,
+        name: "Marca",
+      },
+      {
+        selector: 'input[name="modeloPipeta"]',
+        value: extractedData.modeloPipeta,
+        name: "Modelo",
+      },
+      {
+        selector: 'input[name="numeroPipeta"]',
+        value: extractedData.numeroPipeta,
+        name: "Número de Série",
+      },
+      {
+        selector: 'input[name="numeroIdentificacao"]',
+        value: extractedData.numeroIdentificacao,
+        name: "Número de Identificação",
+      },
+      {
+        selector: 'input[name="numeroCertificado"]',
+        value: numeroCertificadoFinal,
+        name: "Número do Certificado",
+      },
+      {
+        selector: 'input[name="capacidade"]',
+        value: extractedData.capacidade,
+        name: "Capacidade",
+      },
+      {
+        selector: 'select[name="unidadeCapacidade"]',
+        value: extractedData.unidadeCapacidade,
+        name: "Unidade da Capacidade",
+      },
+      {
+        selector: 'input[name="faixaIndicacao"]',
+        value: extractedData.faixaIndicacao,
+        name: "Faixa de Indicação",
+      },
+      {
+        selector: 'select[name="unidadeFaixaIndicacao"]',
+        value: extractedData.unidadeFaixaIndicacao,
+        name: "Unidade da Faixa de Indicação",
+      },
+      {
+        selector: 'input[name="faixaCalibrada"]',
+        value: extractedData.faixaCalibrada,
+        name: "Faixa Calibrada",
+      },
+      {
+        selector: 'select[name="unidadeFaixaCalibrada"]',
+        value: extractedData.unidadeFaixaCalibrada,
+        name: "Unidade da Faixa Calibrada",
+      },
+    ];
+
+    // Filtrar apenas campos com valores válidos
+    fieldMappings.forEach(({ selector, value, name }) => {
+      if (value && value !== "N/A" && value.trim() !== "") {
+        fieldsToAnimate.push({ selector, value, name });
+      }
+    });
+
+    // Se for multicanal, adicionar quantidade de canais
+    if (
+      extractedData.tipoInstrumento === "multicanal" &&
+      extractedData.quantidadeCanais
+    ) {
+      fieldsToAnimate.push({
+        selector: 'select[name="quantidadeCanais"]',
+        value: extractedData.quantidadeCanais.toString(),
+        name: "Quantidade de Canais",
+      });
+    }
+
+    try {
+      // Executar animação de preenchimento
+      await executeAnimationSequence(fieldsToAnimate);
+
+      // Após a animação, atualizar o estado do React
+      updateFormDataAfterAnimation(extractedData, numeroCertificadoFinal);
+    } catch (error) {
+      console.error("Erro durante animação:", error);
+      // Em caso de erro, usar método direto
+      updateFormDataDirectly(extractedData, numeroCertificadoFinal);
+    }
+  };
+
+  // Função auxiliar para atualizar dados após animação
+  const updateFormDataAfterAnimation = (
+    extractedData,
+    numeroCertificadoFinal
+  ) => {
     // Atualizar dados do formulário
     setFormData((prev) => ({
       ...prev,
@@ -664,6 +804,39 @@ const EmitirCertificadoPage = () => {
           : prev.quantidadeCanais,
     }));
 
+    handlePointsAndSpecialCases(extractedData);
+  };
+
+  // Função auxiliar para método direto (fallback)
+  const updateFormDataDirectly = (extractedData, numeroCertificadoFinal) => {
+    // Atualizar dados do formulário
+    setFormData((prev) => ({
+      ...prev,
+      tipoEquipamento: extractedData.tipoEquipamento,
+      tipoInstrumento: extractedData.tipoInstrumento,
+      marcaPipeta: extractedData.marcaPipeta,
+      modeloPipeta: extractedData.modeloPipeta,
+      numeroPipeta: extractedData.numeroPipeta,
+      numeroIdentificacao: extractedData.numeroIdentificacao,
+      numeroCertificado: numeroCertificadoFinal,
+      capacidade: extractedData.capacidade,
+      unidadeCapacidade: extractedData.unidadeCapacidade,
+      faixaIndicacao: extractedData.faixaIndicacao,
+      unidadeFaixaIndicacao: extractedData.unidadeFaixaIndicacao,
+      faixaCalibrada: extractedData.faixaCalibrada,
+      unidadeFaixaCalibrada: extractedData.unidadeFaixaCalibrada,
+      // Para multicanal, incluir também a quantidade de canais
+      quantidadeCanais:
+        extractedData.tipoInstrumento === "multicanal"
+          ? extractedData.quantidadeCanais
+          : prev.quantidadeCanais,
+    }));
+
+    handlePointsAndSpecialCases(extractedData);
+  };
+
+  // Função auxiliar para lidar com pontos e casos especiais
+  const handlePointsAndSpecialCases = (extractedData) => {
     // Atualizar pontos de calibração
     setPontosCalibra(extractedData.pontosCalibra);
 
@@ -745,6 +918,24 @@ const EmitirCertificadoPage = () => {
     setTimeout(() => {
       setAutoPreenchimento({ ativo: false, mensagem: "" });
     }, 3000);
+
+    // Aguardar um tempo para garantir que tudo foi preenchido e depois clicar no botão "Gerar Certificado"
+    setTimeout(async () => {
+      try {
+        const buttonClicked = await animateButtonClick(
+          'button[type="submit"]',
+          "Gerar Certificado"
+        );
+
+        if (buttonClicked) {
+          console.log(
+            '🎉 IA clicou automaticamente no botão "Gerar Certificado"'
+          );
+        }
+      } catch (error) {
+        console.error("Erro ao clicar no botão automaticamente:", error);
+      }
+    }, 700); 
   };
 
   // Função para limpar dados ao editar (mantém apenas campos específicos)
@@ -3166,6 +3357,18 @@ const EmitirCertificadoPage = () => {
           </form>
         )}
         {/* Componente de IA para extração de dados */}
+        {/* Controles de animação da IA */}
+        {!certificadoGerado && (
+          <AIAnimationControls
+            isAnimating={isAnimating}
+            animationSpeed={animationSpeed}
+            setAnimationSpeed={setAnimationSpeed}
+            stopAnimation={stopAnimation}
+            progress={animationProgress}
+            currentField={currentField}
+          />
+        )}
+
         {/* Assistente IA Chat - apenas na tela de preenchimento */}
         <AIChatAssistant
           onDataExtracted={handleDataExtracted}
