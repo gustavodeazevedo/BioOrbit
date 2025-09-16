@@ -935,7 +935,7 @@ const EmitirCertificadoPage = () => {
       } catch (error) {
         console.error("Erro ao clicar no botão automaticamente:", error);
       }
-    }, 700); 
+    }, 700);
   };
 
   // Função para limpar dados ao editar (mantém apenas campos específicos)
@@ -2145,15 +2145,6 @@ const EmitirCertificadoPage = () => {
               <div className="flex justify-center gap-4">
                 <ActionButton
                   onClick={handleEditarDados}
-                  variant="outline"
-                  size="md"
-                  className="px-6"
-                >
-                  Editar Dados
-                </ActionButton>
-
-                <ActionButton
-                  onClick={() => navigate("/selecionar-cliente")}
                   variant="outline"
                   size="md"
                   className="px-6"
