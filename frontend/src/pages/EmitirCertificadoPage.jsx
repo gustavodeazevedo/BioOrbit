@@ -92,6 +92,8 @@ const EmitirCertificadoPage = () => {
   });
   const [certificadoGerado, setCertificadoGerado] = useState(false); // Fator Z calculado com base na temperatura
   const [fatorZ, setFatorZ] = useState(1.0029); // Valor padrão para 20°C
+  // Estado para controlar erros de validação
+  const [validationErrors, setValidationErrors] = useState({});
   // Estado para os pontos de calibração
   const [pontosCalibra, setPontosCalibra] = useState([
     {
@@ -195,6 +197,28 @@ const EmitirCertificadoPage = () => {
     return formatTemperature(valor);
   };
 
+  // Função para validar o número do certificado
+  const validateNumeroCertificado = (valor) => {
+    // Remove espaços em branco
+    const valorLimpo = valor.trim();
+
+    // Verifica se está vazio
+    if (!valorLimpo) {
+      return "Número do certificado é obrigatório";
+    }
+
+    // Regex para validar o formato: apenas números seguidos de um ponto (sem números após o ponto)
+    // Exemplos válidos: 1234., 8663., 999.
+    // Exemplos inválidos: 1234.1, 8663.123, 999 (sem ponto)
+    const formatoValido = /^\d+\.$/;
+
+    if (!formatoValido.test(valorLimpo)) {
+      return "Formato inválido. Use apenas números seguidos de ponto (Ex: 1234.). A IA completará automaticamente após o ponto.";
+    }
+
+    return null; // Sem erro
+  };
+
   // Buscar dados do cliente se não foram passados pelo location state
   useEffect(() => {
     const fetchClienteData = async () => {
@@ -280,6 +304,31 @@ const EmitirCertificadoPage = () => {
         ...formData,
         [name]: value,
         quantidadeCanais: value === "multicanal" ? quantidadeCanais : 1,
+      });
+    } else if (name === "numeroCertificado") {
+      // Filtrar entrada para impedir números após o ponto
+      let valorFiltrado = value;
+
+      // Se já contém um ponto, não permite adicionar mais números depois dele
+      if (value.includes(".")) {
+        const partes = value.split(".");
+        // Mantém apenas a parte antes do ponto + o ponto, remove qualquer coisa após o ponto
+        valorFiltrado = partes[0] + ".";
+      }
+
+      // Validação específica para número do certificado
+      const erro = validateNumeroCertificado(valorFiltrado);
+
+      // Atualiza o estado de erros
+      setValidationErrors((prevErrors) => ({
+        ...prevErrors,
+        numeroCertificado: erro,
+      }));
+
+      // Atualiza o valor filtrado (impedindo números após o ponto)
+      setFormData({
+        ...formData,
+        [name]: valorFiltrado,
       });
     } else {
       setFormData({
@@ -515,6 +564,32 @@ const EmitirCertificadoPage = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    // Validar o número do certificado antes de gerar o PDF
+    const errorNumeroCertificado = validateNumeroCertificado(
+      formData.numeroCertificado
+    );
+
+    if (errorNumeroCertificado) {
+      // Atualiza o estado de erro para mostrar na interface
+      setValidationErrors((prevErrors) => ({
+        ...prevErrors,
+        numeroCertificado: errorNumeroCertificado,
+      }));
+
+      // Mostra alerta para o usuário
+      alert("Erro de validação: " + errorNumeroCertificado);
+
+      // Foca no campo com erro
+      const inputElement = document.querySelector(
+        'input[name="numeroCertificado"]'
+      );
+      if (inputElement) {
+        inputElement.focus();
+      }
+
+      return; // Impede a geração do certificado
+    }
 
     // Aqui seria implementada a lógica para gerar o PDF do certificado
     // usando os dados do cliente e os dados do formulário
@@ -2175,8 +2250,10 @@ const EmitirCertificadoPage = () => {
                   name="numeroCertificado"
                   value={formData.numeroCertificado}
                   onChange={handleChange}
-                  placeholder="Ex: 8550.1"
+                  placeholder="Ex: 1234."
+                  title="Digite um ponto após o número da OS"
                   required
+                  error={validationErrors.numeroCertificado}
                 />
                 <div>
                   <label
