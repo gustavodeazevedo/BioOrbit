@@ -94,6 +94,8 @@ const EmitirCertificadoPage = () => {
   const [fatorZ, setFatorZ] = useState(1.0029); // Valor padrão para 20°C
   // Estado para controlar erros de validação
   const [validationErrors, setValidationErrors] = useState({});
+  // Estado para controlar erros de anotação (unidades obrigatórias)
+  const [annotationErrors, setAnnotationErrors] = useState([]);
   // Estado para os pontos de calibração
   const [pontosCalibra, setPontosCalibra] = useState([
     {
@@ -198,7 +200,7 @@ const EmitirCertificadoPage = () => {
   };
 
   // Função para validar o número do certificado
-  const validateNumeroCertificado = (valor) => {
+  const validateNumeroCertificado = (valor, allowCompleteFormat = false) => {
     // Remove espaços em branco
     const valorLimpo = valor.trim();
 
@@ -207,19 +209,116 @@ const EmitirCertificadoPage = () => {
       return "Número do certificado é obrigatório";
     }
 
-    // Regex para validar o formato: apenas números seguidos de um ponto (sem números após o ponto)
-    // Exemplos válidos: 1234., 8663., 999.
-    // Exemplos inválidos: 1234.1, 8663.123, 999 (sem ponto)
-    const formatoValido = /^\d+\.$/;
-
-    if (!formatoValido.test(valorLimpo)) {
-      return "Formato inválido. Use apenas números seguidos de ponto (Ex: 1234.). A IA completará automaticamente após o ponto.";
+    if (allowCompleteFormat) {
+      // Para validação final: aceita formato completo (1234.1) ou formato de entrada (1234.)
+      const formatoCompletoValido = /^\d+\.\d*$/;
+      if (!formatoCompletoValido.test(valorLimpo)) {
+        return "Formato inválido. O número do certificado deve conter números, ponto e números após o ponto.";
+      }
+    } else {
+      // Para entrada manual: apenas números seguidos de um ponto (sem números após o ponto)
+      // Exemplos válidos: 1234., 8663., 999.
+      // Exemplos inválidos: 1234.1, 8663.123, 999 (sem ponto)
+      const formatoEntradaValido = /^\d+\.$/;
+      if (!formatoEntradaValido.test(valorLimpo)) {
+        return "Formato inválido. Use apenas números seguidos de ponto (Ex: 1234.). A IA completará automaticamente após o ponto.";
+      }
     }
 
     return null; // Sem erro
   };
 
-  // Buscar dados do cliente se não foram passados pelo location state
+  // Função para validar anotações do Notion (unidades obrigatórias)
+  const validateNotionAnnotations = (extractedData, originalText = "") => {
+    const errors = [];
+
+    console.log("🔍 Validando dados extraídos:", extractedData);
+    console.log("📝 Texto original recebido:", originalText ? "SIM" : "NÃO");
+    console.log("📝 Tamanho do texto:", originalText.length);
+
+    // ESTRATÉGIA 1: Verificar se as unidades já estão nos dados extraídos
+    if (
+      extractedData.unidadeCapacidade &&
+      (extractedData.unidadeCapacidade === "µL" ||
+        extractedData.unidadeCapacidade === "mL")
+    ) {
+      console.log(
+        "✅ Unidade de capacidade encontrada nos dados extraídos:",
+        extractedData.unidadeCapacidade
+      );
+    }
+
+    if (
+      extractedData.unidadeFaixaIndicacao &&
+      (extractedData.unidadeFaixaIndicacao === "µL" ||
+        extractedData.unidadeFaixaIndicacao === "mL")
+    ) {
+      console.log(
+        "✅ Unidade de faixa indicação encontrada nos dados extraídos:",
+        extractedData.unidadeFaixaIndicacao
+      );
+    }
+
+    if (
+      extractedData.unidadeFaixaCalibrada &&
+      (extractedData.unidadeFaixaCalibrada === "µL" ||
+        extractedData.unidadeFaixaCalibrada === "mL")
+    ) {
+      console.log(
+        "✅ Unidade de faixa calibrada encontrada nos dados extraídos:",
+        extractedData.unidadeFaixaCalibrada
+      );
+    }
+
+    // Se as unidades estão presentes nos dados extraídos, a validação passou
+    if (
+      extractedData.unidadeCapacidade ||
+      extractedData.unidadeFaixaIndicacao ||
+      extractedData.unidadeFaixaCalibrada
+    ) {
+      console.log("✅ Unidades encontradas nos dados extraídos - validação OK");
+      return []; // Sem erros
+    }
+
+    // ESTRATÉGIA 2: Se não há texto original, não podemos validar - assumir que está correto
+    if (!originalText || originalText.trim().length === 0) {
+      console.log(
+        "⚠️ Sem texto original e sem unidades extraídas - assumindo validação OK"
+      );
+      return []; // Sem erros por enquanto
+    }
+
+    // ESTRATÉGIA 3: Validar pelo texto original
+    const volumePattern = /VOLUME:\s*.*?(ul|ml)/i;
+    const volumeMatch = volumePattern.test(originalText);
+    console.log("📊 VOLUME pattern match:", volumeMatch);
+    if (!volumeMatch) {
+      errors.push(
+        "VOLUME deve incluir unidade (ul ou ml). Exemplo: 'VOLUME: 100ul'"
+      );
+    }
+
+    const indicacaoPattern = /PONTOS DE INDICA[CÇ][AÃ]O:\s*.*?(ul|ml)/i;
+    const indicacaoMatch = indicacaoPattern.test(originalText);
+    console.log("📈 PONTOS DE INDICAÇÃO pattern match:", indicacaoMatch);
+    if (!indicacaoMatch) {
+      errors.push(
+        "PONTOS DE INDICAÇÃO deve incluir unidade (ul ou ml). Exemplo: 'PONTOS DE INDICAÇÃO: 10-100ul'"
+      );
+    }
+
+    const calibradosPattern = /PONTOS CALIBRADOS:\s*.*?(ul|ml)/i;
+    const calibradosMatch = calibradosPattern.test(originalText);
+    console.log("🎯 PONTOS CALIBRADOS pattern match:", calibradosMatch);
+    if (!calibradosMatch) {
+      errors.push(
+        "PONTOS CALIBRADOS deve incluir unidade (ul ou ml). Exemplo: 'PONTOS CALIBRADOS: 10-100ul'"
+      );
+    }
+
+    console.log("❌ Errors found:", errors);
+    return errors;
+  }; // Buscar dados do cliente se não foram passados pelo location state
   useEffect(() => {
     const fetchClienteData = async () => {
       if (location.state?.clienteNome) {
@@ -566,8 +665,10 @@ const EmitirCertificadoPage = () => {
     e.preventDefault();
 
     // Validar o número do certificado antes de gerar o PDF
+    // Usar allowCompleteFormat=true para aceitar formato completo (1234.1)
     const errorNumeroCertificado = validateNumeroCertificado(
-      formData.numeroCertificado
+      formData.numeroCertificado,
+      true // Permite formato completo na validação final
     );
 
     if (errorNumeroCertificado) {
@@ -588,6 +689,17 @@ const EmitirCertificadoPage = () => {
         inputElement.focus();
       }
 
+      return; // Impede a geração do certificado
+    }
+
+    // Verificar se há erros de anotação pendentes
+    if (annotationErrors.length > 0) {
+      alert(
+        "❌ ERRO: Não é possível gerar o certificado!\n\n" +
+          "As anotações do Notion devem incluir unidades (ul ou ml):\n\n" +
+          annotationErrors.join("\n") +
+          "\n\nCorreja as anotações e use a IA novamente."
+      );
       return; // Impede a geração do certificado
     }
 
@@ -741,12 +853,39 @@ const EmitirCertificadoPage = () => {
   };
 
   // Função para processar dados extraídos pela IA
-  const handleDataExtracted = async (extractedData) => {
+  const handleDataExtracted = async (extractedData, originalText = "") => {
     // Se a animação estiver desabilitada, usar método antigo
     if (isAnimating) {
       stopAnimation();
       return;
     }
+
+    // Validar anotações para verificar se contêm unidades obrigatórias
+    const annotationValidationErrors = validateNotionAnnotations(
+      extractedData,
+      originalText || extractedData.originalText || ""
+    );
+
+    // Se houver erros de anotação, mostrar e bloquear processo
+    if (annotationValidationErrors.length > 0) {
+      setAnnotationErrors(annotationValidationErrors);
+
+      // Mostrar alerta detalhado com todos os erros
+      alert(
+        "❌ ERRO: Anotações do Notion incompletas!\n\n" +
+          "As seguintes informações devem incluir unidades (ul ou ml):\n\n" +
+          annotationValidationErrors.join("\n") +
+          "\n\n📝 Formato correto:\n" +
+          "VOLUME: 100ul\n" +
+          "PONTOS DE INDICAÇÃO: 10-100ul\n" +
+          "PONTOS CALIBRADOS: 10-100ul"
+      );
+
+      return; // Bloqueia o processamento
+    }
+
+    // Limpar erros de anotação se tudo estiver correto
+    setAnnotationErrors([]);
 
     // Preparar dados para animação
     const fieldsToAnimate = [];
@@ -2242,7 +2381,51 @@ const EmitirCertificadoPage = () => {
             className="space-y-6"
             ref={formRef}
           >
-            {" "}
+            {/* Seção de Erros de Anotação */}
+            {annotationErrors.length > 0 && (
+              <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <svg
+                      className="h-5 w-5 text-red-400"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-red-800">
+                      ❌ Anotações do Notion Incompletas
+                    </h3>
+                    <div className="mt-2 text-sm text-red-700">
+                      <p className="mb-2">
+                        As seguintes informações devem incluir unidades (ul ou
+                        ml):
+                      </p>
+                      <ul className="list-disc list-inside space-y-1">
+                        {annotationErrors.map((error, index) => (
+                          <li key={index}>{error}</li>
+                        ))}
+                      </ul>
+                      <div className="mt-3 p-2 bg-red-100 rounded text-xs">
+                        <strong>📝 Formato correto:</strong>
+                        <br />
+                        VOLUME: 100ul
+                        <br />
+                        PONTOS DE INDICAÇÃO: 10-100ul
+                        <br />
+                        PONTOS CALIBRADOS: 10-100ul
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}{" "}
             <SectionCard title="Dados do Certificado" variant="default">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormInput
