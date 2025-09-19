@@ -13,7 +13,16 @@ import {
 import useDataExtraction from "../hooks/useDataExtraction";
 import "../styles/AIFloatingButton.css";
 
-const AIChatAssistant = ({ onDataExtracted, showInCurrentPage = true }) => {
+const AIChatAssistant = ({
+  onDataExtracted,
+  showInCurrentPage = true,
+  animationSpeed,
+  setAnimationSpeed,
+  isAnimating,
+  stopAnimation,
+  progress,
+  currentField,
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [inputMessage, setInputMessage] = useState("");
@@ -343,6 +352,71 @@ const AIChatAssistant = ({ onDataExtracted, showInCurrentPage = true }) => {
                   </div>
                 </div>
 
+                {/* Controle de Velocidade de Preenchimento */}
+                {animationSpeed !== undefined && setAnimationSpeed && (
+                  <div className="mt-3 px-2 py-2 bg-gray-50 rounded-lg border">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs font-medium text-gray-700">
+                        Velocidade de Preenchimento
+                      </label>
+                      <span className="text-xs text-gray-500">
+                        {animationSpeed === 1
+                          ? "Lenta"
+                          : animationSpeed === 2
+                          ? "Normal"
+                          : "Rápida"}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs text-gray-500">Lenta</span>
+                      <input
+                        type="range"
+                        min="1"
+                        max="3"
+                        value={animationSpeed}
+                        onChange={(e) =>
+                          setAnimationSpeed(Number(e.target.value))
+                        }
+                        className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                        style={{
+                          background: `linear-gradient(to right, rgb(144, 199, 45) 0%, rgb(144, 199, 45) ${
+                            ((animationSpeed - 1) / 2) * 100
+                          }%, #e5e7eb ${
+                            ((animationSpeed - 1) / 2) * 100
+                          }%, #e5e7eb 100%)`,
+                        }}
+                      />
+                      <span className="text-xs text-gray-500">Rápida</span>
+                    </div>
+                    {isAnimating && (
+                      <div className="mt-2 flex items-center justify-between">
+                        <div className="text-xs text-gray-600">
+                          {currentField && `Preenchendo: ${currentField}`}
+                        </div>
+                        <button
+                          onClick={stopAnimation}
+                          className="text-xs text-red-600 hover:text-red-800 font-medium"
+                        >
+                          Parar
+                        </button>
+                      </div>
+                    )}
+                    {progress !== undefined && progress > 0 && (
+                      <div className="mt-2">
+                        <div className="w-full bg-gray-200 rounded-full h-1.5">
+                          <div
+                            className="bg-green-600 h-1.5 rounded-full transition-all duration-300"
+                            style={{ width: `${progress}%` }}
+                          ></div>
+                        </div>
+                        <div className="text-xs text-gray-500 text-center mt-1">
+                          {Math.round(progress)}% concluído
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="mt-2 text-xs text-gray-500 text-center">
                   Pressione Enter para enviar • Shift+Enter para nova linha
                 </div>
@@ -435,6 +509,32 @@ const AIChatAssistant = ({ onDataExtracted, showInCurrentPage = true }) => {
               border-box;
           animation: border-glow 2s linear infinite;
           box-shadow: 0 0 0 3px rgba(144, 199, 45, 0.1);
+        }
+
+        /* Estilos para o slider de velocidade */
+        .slider::-webkit-slider-thumb {
+          appearance: none;
+          height: 16px;
+          width: 16px;
+          border-radius: 50%;
+          background: rgb(144, 199, 45);
+          cursor: pointer;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+          border: 2px solid white;
+        }
+
+        .slider::-moz-range-thumb {
+          height: 16px;
+          width: 16px;
+          border-radius: 50%;
+          background: rgb(144, 199, 45);
+          cursor: pointer;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+          border: 2px solid white;
+        }
+
+        .slider:focus::-webkit-slider-thumb {
+          box-shadow: 0 0 0 2px rgba(144, 199, 45, 0.3);
         }
       `}</style>
     </>,
