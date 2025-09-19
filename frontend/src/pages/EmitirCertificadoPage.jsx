@@ -33,7 +33,6 @@ import InfoBanner from "../components/InfoBanner";
 import RadioGroup from "../components/RadioGroup";
 import SectionCard from "../components/SectionCard";
 import AIChatAssistant from "../components/AIChatAssistant";
-import AIAnimationControls from "../components/AIAnimationControls";
 import useAnimatedInput from "../hooks/useAnimatedInput";
 import { getClienteById } from "../services/clienteService";
 import { formatNumberInput, formatTemperature } from "../utils/formatUtils";
@@ -3628,22 +3627,18 @@ const EmitirCertificadoPage = () => {
           </form>
         )}
         {/* Componente de IA para extração de dados */}
-        {/* Controles de animação da IA */}
-        {!certificadoGerado && (
-          <AIAnimationControls
-            isAnimating={isAnimating}
-            animationSpeed={animationSpeed}
-            setAnimationSpeed={setAnimationSpeed}
-            stopAnimation={stopAnimation}
-            progress={animationProgress}
-            currentField={currentField}
-          />
-        )}
+        {/* Controles de animação da IA movidos para dentro do chat */}
 
         {/* Assistente IA Chat - apenas na tela de preenchimento */}
         <AIChatAssistant
           onDataExtracted={handleDataExtracted}
           showInCurrentPage={!certificadoGerado}
+          animationSpeed={animationSpeed}
+          setAnimationSpeed={setAnimationSpeed}
+          isAnimating={isAnimating}
+          stopAnimation={stopAnimation}
+          progress={animationProgress}
+          currentField={currentField}
         />
       </div>
     </div>

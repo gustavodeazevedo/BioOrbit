@@ -10,14 +10,49 @@ export const useAnimatedInput = () => {
     const animationQueueRef = useRef([]);
     const cursorRef = useRef(null);
 
-    // Configurações de velocidade
+    // Configurações de velocidade (invertido - números menores = mais rápido)
     const ANIMATION_SPEEDS = {
-        slow: 50,    // Reduzido de 100ms para 50ms
-        medium: 15,  // Reduzido de 20ms para 15ms  
-        fast: 5      // Reduzido de 10ms para 5ms
+        slow: 5,     // Rápido - menor delay
+        medium: 15,  // Médio
+        fast: 50     // Lento - maior delay
     };
 
-    const [animationSpeed, setAnimationSpeed] = useState('medium');
+    const [animationSpeed, setAnimationSpeedInternal] = useState('medium');
+
+    // Função para converter valores numéricos para strings e definir velocidade
+    const setAnimationSpeed = useCallback((value) => {
+        console.log('🎯 setAnimationSpeed chamado com:', value);
+        if (typeof value === 'number') {
+            switch (value) {
+                case 1:
+                    console.log('🐌 Definindo velocidade para LENTA');
+                    setAnimationSpeedInternal('fast');  // valor 1 = lenta = delay maior (fast nos delays)
+                    break;
+                case 2:
+                    console.log('🚶 Definindo velocidade para MÉDIA');
+                    setAnimationSpeedInternal('medium');
+                    break;
+                case 3:
+                    console.log('🚀 Definindo velocidade para RÁPIDA');
+                    setAnimationSpeedInternal('slow');  // valor 3 = rápida = delay menor (slow nos delays)
+                    break;
+                default:
+                    setAnimationSpeedInternal('medium');
+            }
+        } else {
+            setAnimationSpeedInternal(value);
+        }
+    }, []);
+
+    // Função para obter a velocidade numérica atual
+    const getNumericSpeed = useCallback(() => {
+        switch (animationSpeed) {
+            case 'fast': return 1;  // fast = lenta = 1
+            case 'medium': return 2;
+            case 'slow': return 3;  // slow = rápida = 3
+            default: return 2;
+        }
+    }, [animationSpeed]);
 
 
     // Cria um cursor virtual que se move pela tela
@@ -298,8 +333,9 @@ export const useAnimatedInput = () => {
     return {
         isAnimating,
         currentField,
-        animationSpeed,
+        animationSpeed: getNumericSpeed(), // Retorna valor numérico para o componente
         setAnimationSpeed,
+        getNumericSpeed,
         animateFieldFill,
         executeAnimationSequence,
         animateButtonClick,
