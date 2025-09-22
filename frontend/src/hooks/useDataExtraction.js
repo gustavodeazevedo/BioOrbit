@@ -217,6 +217,13 @@ export const useDataExtraction = () => {
                 return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
             };
 
+            // Função específica para campos que devem estar sempre em maiúscula
+            const processFieldUpperCase = (value, defaultValue = '') => {
+                if (!value || value === '') return defaultValue;
+                if (value === 'N/A') return 'N/A';
+                return value.toUpperCase();
+            };
+
             // Função específica para processar números (não aplica transformações de texto)
             const processNumber = (value, defaultValue = '') => {
                 if (!value || value === '') return defaultValue;
@@ -230,10 +237,10 @@ export const useDataExtraction = () => {
             let extractedData = {
                 tipoEquipamento,
                 tipoInstrumento,
-                marcaPipeta: processField(marca),
-                modeloPipeta: processField(modelo),
-                numeroPipeta: processField(serie),
-                numeroIdentificacao: processField(numeroIdentificacao, 'N/A'),
+                marcaPipeta: processFieldUpperCase(marca), // FABRICANTE sempre em maiúscula
+                modeloPipeta: processFieldUpperCase(modelo), // MODELO sempre em maiúscula
+                numeroPipeta: processFieldUpperCase(serie), // Nº DE SÉRIE sempre em maiúscula
+                numeroIdentificacao: processFieldUpperCase(numeroIdentificacao, 'N/A'), // Nº DE IDENTIFICAÇÃO sempre em maiúscula
                 numeroCertificado: processNumber(numeroOrdenacao), // Usar processNumber para não aplicar transformações de texto
                 capacidade: volume || '',
                 unidadeCapacidade: 'µL',
