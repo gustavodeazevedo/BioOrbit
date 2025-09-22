@@ -484,10 +484,10 @@ export class PDFService {    /**
                     { text: `${dadosCertificado.marcaPipeta?.toUpperCase() || 'N/A'}\n`, style: 'dynamicText' },
 
                     { text: 'Nº DE IDENTIFICAÇÃO: ', style: 'staticText' },
-                    { text: `${dadosCertificado.numeroIdentificacao || 'N/A'}\n`, style: 'dynamicText' },
+                    { text: `${dadosCertificado.numeroIdentificacao?.toUpperCase() || 'N/A'}\n`, style: 'dynamicText' },
 
                     { text: 'Nº DE SÉRIE: ', style: 'staticText' },
-                    { text: `${dadosCertificado.numeroPipeta || 'N/A'}\n`, style: 'dynamicText' },
+                    { text: `${dadosCertificado.numeroPipeta?.toUpperCase() || 'N/A'}\n`, style: 'dynamicText' },
 
                     { text: 'MODELO: ', style: 'staticText' },
                     { text: `${dadosCertificado.modeloPipeta?.toUpperCase() || 'N/A'}\n`, style: 'dynamicText' }, { text: 'DATA DE CALIBRAÇÃO: ', style: 'staticText' },
