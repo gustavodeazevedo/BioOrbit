@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { UserPlus, Search, Edit, Trash2, ArrowLeft } from "lucide-react";
 import { getClientes, deleteCliente } from "../services/clienteService";
-import { TableSkeleton, ColdStartMessage } from "../components/SkeletonLoader";
+import { TableSkeleton } from "../components/SkeletonLoader";
 import useColdStartDetection from "../hooks/useColdStartDetection";
 
 const ClientesPage = () => {
@@ -196,9 +196,6 @@ const ClientesPage = () => {
           </p>
         </div>
       )}
-
-      {/* Mensagem de Cold Start */}
-      <ColdStartMessage show={isColdStart} onClose={() => stopLoading()} />
     </div>
   );
 };
