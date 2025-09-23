@@ -5,9 +5,34 @@ require('dotenv').config();
 
 const app = express();
 
+// Configuração CORS explícita
+const corsOptions = {
+    origin: [
+        'http://localhost:5173',
+        'http://localhost:4173',
+        'https://bio-orbit.vercel.app',
+        'https://bioorbit.vercel.app',
+        'https://www.bio-orbit.vercel.app',
+        process.env.FRONTEND_URL
+    ].filter(Boolean), // Remove valores undefined
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    optionsSuccessStatus: 200 // Para compatibilidade com navegadores legados
+};
+
 // Middlewares
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
+
+// Middleware de debug para CORS
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url} - Origin: ${req.get('Origin')}`);
+    next();
+});
+
+// Middleware adicional para OPTIONS
+app.options('*', cors(corsOptions));
 
 // Conexão com o MongoDB
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/biocalib', {
@@ -26,6 +51,15 @@ app.use('/api/calibracoes', require('./routes/calibracoes'));
 app.use('/api/usuarios', require('./routes/usuarios'));
 app.use('/api/admin/token', require('./routes/token')); // Adicionando rotas de gerenciamento de token
 app.use('/api/clientes', require('./routes/clientes')); // Adicionando rotas de clientes
+
+// Rota de health check
+app.get('/health', (req, res) => {
+    res.status(200).json({ 
+        status: 'OK', 
+        timestamp: new Date().toISOString(),
+        mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+    });
+});
 
 // Rota padrão
 app.get('/', (req, res) => {
