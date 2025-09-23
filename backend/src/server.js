@@ -54,8 +54,8 @@ app.use('/api/clientes', require('./routes/clientes')); // Adicionando rotas de 
 
 // Rota de health check
 app.get('/health', (req, res) => {
-    res.status(200).json({ 
-        status: 'OK', 
+    res.status(200).json({
+        status: 'OK',
         timestamp: new Date().toISOString(),
         mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
     });
@@ -63,8 +63,8 @@ app.get('/health', (req, res) => {
 
 // Rota de teste CORS (pública)
 app.get('/api/test', (req, res) => {
-    res.status(200).json({ 
-        message: 'CORS test successful', 
+    res.status(200).json({
+        message: 'CORS test successful',
         origin: req.get('Origin'),
         timestamp: new Date().toISOString()
     });
