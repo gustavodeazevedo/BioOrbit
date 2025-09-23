@@ -149,34 +149,6 @@ export const SearchSkeleton = () => {
   );
 };
 
-// Componente para mostrar mensagem de cold start
-export const ColdStartMessage = ({ show, onClose }) => {
-  if (!show) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg max-w-md mx-4 text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent mx-auto mb-4"></div>
-        <h3 className="text-lg font-semibold mb-2">
-          Conectando ao servidor...
-        </h3>
-        <p className="text-gray-600 text-sm mb-4">
-          O servidor está inicializando. Esta é uma conexão inicial e pode levar
-          alguns segundos devido às limitações do plano gratuito de hospedagem.
-        </p>
-        {onClose && (
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
-          >
-            Continuar em background
-          </button>
-        )}
-      </div>
-    </div>
-  );
-};
-
 export default {
   TableRowSkeleton,
   TableSkeleton,
@@ -186,5 +158,4 @@ export default {
   ButtonSkeleton,
   InputSkeleton,
   SearchSkeleton,
-  ColdStartMessage,
 };
