@@ -1,5 +1,5 @@
 /* Importação do CSS do react-loading-skeleton */
-@import 'react-loading-skeleton/dist/skeleton.css';
+@import "react-loading-skeleton/dist/skeleton.css";
 
 @tailwind base;
 @tailwind components;
