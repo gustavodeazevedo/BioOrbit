@@ -14,7 +14,7 @@ const SelecionarClientePage = () => {
 
   // Hook para detectar cold start
   const { isColdStart, startLoading, stopLoading } =
-    useColdStartDetection(2500);
+    useColdStartDetection(1500);
 
   useEffect(() => {
     fetchClientes();
