@@ -4,7 +4,9 @@ services:
     env: node
     region: oregon
     plan: free
-    startCommand: npm start    envVars:
+    startCommand: npm start
+    buildCommand: cd backend && npm install
+    envVars:
       - key: NODE_ENV
         value: production
       - key: MONGODB_URI
@@ -13,4 +15,6 @@ services:
         generateValue: true
       - key: CORPORATE_TOKEN
         value: BioKeyOne
-    healthCheckPath: /
+      - key: FRONTEND_URL
+        value: https://bio-orbit.vercel.app
+    healthCheckPath: /health
