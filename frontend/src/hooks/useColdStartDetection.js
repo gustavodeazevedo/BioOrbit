@@ -24,7 +24,7 @@ export const useColdStartDetection = (threshold = 3000, minDisplayTime = 800) =>
       if (loadingStartTime) {
         const elapsedTime = Date.now() - loadingStartTime;
         const remainingTime = Math.max(0, minDisplayTime - elapsedTime);
-        
+
         minDisplayTimer = setTimeout(() => {
           setIsColdStart(false);
         }, remainingTime);
