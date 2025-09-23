@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { UserPlus, Search, Edit, Trash2, ArrowLeft } from "lucide-react";
 import { getClientes, deleteCliente } from "../services/clienteService";
+import { TableSkeleton, ColdStartMessage } from "../components/SkeletonLoader";
+import useColdStartDetection from "../hooks/useColdStartDetection";
 
 const ClientesPage = () => {
   const [clientes, setClientes] = useState([]);
@@ -11,6 +13,10 @@ const ClientesPage = () => {
   const [confirmDelete, setConfirmDelete] = useState(null);
   const navigate = useNavigate();
 
+  // Hook para detectar cold start
+  const { isColdStart, startLoading, stopLoading } =
+    useColdStartDetection(2500);
+
   useEffect(() => {
     fetchClientes();
   }, []);
@@ -18,6 +24,7 @@ const ClientesPage = () => {
   const fetchClientes = async () => {
     try {
       setLoading(true);
+      startLoading();
       const data = await getClientes();
       setClientes(data);
       setError(null);
@@ -26,6 +33,7 @@ const ClientesPage = () => {
       console.error("Erro ao carregar clientes:", err);
     } finally {
       setLoading(false);
+      stopLoading();
     }
   };
 
@@ -103,10 +111,7 @@ const ClientesPage = () => {
       )}
 
       {loading ? (
-        <div className="text-center p-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500 mx-auto"></div>
-          <p className="mt-3 text-gray-600">Carregando clientes...</p>
-        </div>
+        <TableSkeleton rows={5} columns={4} />
       ) : filteredClientes.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="min-w-full bg-white border border-gray-200 rounded-lg">
@@ -191,6 +196,9 @@ const ClientesPage = () => {
           </p>
         </div>
       )}
+
+      {/* Mensagem de Cold Start */}
+      <ColdStartMessage show={isColdStart} onClose={() => stopLoading()} />
     </div>
   );
 };
