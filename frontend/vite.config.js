@@ -29,8 +29,16 @@ export default defineConfig({
                     vendor: ['react', 'react-dom'],
                     router: ['react-router-dom'],
                     charts: ['chart.js', 'react-chartjs-2', 'recharts'],
-                    utils: ['axios', 'pdfmake', 'file-saver', 'xlsx']
+                    utils: ['axios', 'pdfmake', 'file-saver', 'xlsx'],
+                    skeleton: ['react-loading-skeleton']
                 }
+            }
+        }
+    },
+    css: {
+        preprocessorOptions: {
+            css: {
+                charset: false
             }
         }
     }
