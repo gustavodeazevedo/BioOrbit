@@ -4,7 +4,6 @@ const ActionButton = ({
   children,
   onClick,
   variant = "primary",
-  size = "md",
   icon: Icon,
   disabled = false,
   type = "button",
@@ -134,7 +133,9 @@ const ActionButton = ({
     if (!disabled && buttonConfig.defaultColor) {
       e.target.style.backgroundColor = buttonConfig.defaultColor;
     }
-  }; // Determine icon spacing based on variant
+  };
+
+  // Determine icon spacing based on variant
   const getIconClassName = () => {
     if (!children) return "";
     if (variant === "outline-small" || variant === "outline") return "";
