@@ -1,13 +1,95 @@
 {
   "version": 2,
+  "name": "bioorbit",
   "buildCommand": "cd frontend && npm run build",
   "outputDirectory": "frontend/dist",
-  "installCommand": "cd frontend && npm install",
+  "installCommand": "cd frontend && npm install --force",
   "framework": "vite",
+  "regions": ["iad1"],
+  "functions": {
+    "frontend/src/**/*": {
+      "maxDuration": 30
+    }
+  },
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
+        }
+      ]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/(.*\\.(js|css|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot))",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, s-maxage=31536000"
+        }
+      ]
+    },
+    {
+      "source": "/index.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, s-maxage=86400, must-revalidate"
+        }
+      ]
+    }
+  ],
   "rewrites": [
     {
       "source": "/(.*)",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "redirects": [
+    {
+      "source": "/login",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/dashboard",
+      "destination": "/",
+      "permanent": false
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production",
+    "VITE_NODE_ENV": "production"
+  },
+  "build": {
+    "env": {
+      "NODE_ENV": "production"
+    }
+  }
 }
