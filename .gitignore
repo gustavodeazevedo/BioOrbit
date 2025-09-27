@@ -37,3 +37,6 @@ Thumbs.db
 # Arquivos temporários
 *.swp
 *.swo
+
+# Pasta de contexto local
+context/
