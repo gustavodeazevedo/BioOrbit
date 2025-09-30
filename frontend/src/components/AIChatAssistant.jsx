@@ -1,18 +1,75 @@
-import React, { useState, useRef, useEffect } from "react";
+// Bibliotecas externas
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useMemo,
+} from "react";
 import { createPortal } from "react-dom";
-import {
-  Brain,
-  Send,
-  X,
-  Sparkles,
-  CheckCircle,
-  AlertCircle,
-  Minimize2,
-  Maximize2,
-} from "lucide-react";
+import { Brain, Send, X, Minimize2, Maximize2 } from "lucide-react";
+
+// Hooks customizados
 import useDataExtraction from "../hooks/useDataExtraction";
+
+// Estilos
 import "../styles/AIFloatingButton.css";
 
+// ============================================================================
+// CONSTANTES DE CONFIGURAÇÃO - Sistema de Calibração BioOrbit
+// ============================================================================
+
+// Configurações do chat de IA para extração de dados de micropipetas
+const CHAT_CONFIG = {
+  DEFAULT_ROWS: 2,
+  MAX_ROWS: 8,
+  MIN_ROWS: 2,
+  AUTO_CLOSE_DELAY: 800, // ms após processamento
+  SUCCESS_MESSAGE_DELAY: 1000, // ms para mostrar sucesso
+};
+
+// Configurações de animação de preenchimento
+const ANIMATION_CONFIG = {
+  SPEED_LABELS: {
+    1: "Lenta",
+    2: "Normal",
+    3: "Rápida",
+  },
+  PROGRESS_UPDATE_INTERVAL: 100, // ms
+};
+
+// Cores do sistema BioOrbit para elementos de IA
+const AI_COLORS = {
+  PRIMARY_GREEN: "rgb(144, 199, 45)",
+  PRIMARY_GREEN_HOVER: "rgb(130, 180, 40)",
+  SUCCESS_GREEN: "rgb(34, 197, 94)",
+  GRADIENT_STOPS: [
+    "rgb(144, 199, 45) 0%",
+    "rgb(80, 120, 20) 20%",
+    "rgb(200, 255, 80) 40%",
+    "rgb(60, 100, 15) 60%",
+    "rgb(180, 240, 70) 80%",
+    "rgb(144, 199, 45) 100%",
+  ],
+};
+
+// Mensagem inicial do assistente de calibração
+const INITIAL_ASSISTANT_MESSAGE = {
+  id: 1,
+  type: "assistant",
+  content:
+    "Olá! 👋 Sou seu assistente de IA do BioOrbit. Cole os dados do Notion aqui e eu preencherei automaticamente todos os campos de forma automática para você.",
+  timestamp: new Date(),
+};
+
+// ============================================================================
+// COMPONENTE PRINCIPAL
+// ============================================================================
+
+/**
+ * Assistente de IA para extração e preenchimento automático de dados
+ * de calibração de micropipetas a partir de dados do Notion
+ */
 const AIChatAssistant = ({
   onDataExtracted,
   showInCurrentPage = true,
@@ -23,151 +80,230 @@ const AIChatAssistant = ({
   progress,
   currentField,
 }) => {
+  // ============================================================================
+  // ESTADO DO COMPONENTE
+  // ============================================================================
+
+  // Estados de interface
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+
+  // Estados de entrada de dados
   const [inputMessage, setInputMessage] = useState("");
-  const [inputRows, setInputRows] = useState(2); // Estado para controlar altura do textarea
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      type: "assistant",
-      content:
-        "Olá! 👋 Sou seu assistente de IA. Cole os dados do Notion aqui e eu preencherei automaticamente todos os campos do certificado para você.",
-      timestamp: new Date(),
-    },
-  ]);
+  const [inputRows, setInputRows] = useState(CHAT_CONFIG.DEFAULT_ROWS);
+
+  // Estado de mensagens do chat
+  const [messages, setMessages] = useState([INITIAL_ASSISTANT_MESSAGE]);
+
+  // ============================================================================
+  // HOOKS CUSTOMIZADOS
+  // ============================================================================
 
   const { extractPipetteData, isProcessing, error, setError } =
     useDataExtraction();
+
+  // ============================================================================
+  // REFS
+  // ============================================================================
+
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
-  const scrollToBottom = () => {
+  // ============================================================================
+  // FUNÇÕES UTILITÁRIAS - Single Responsibility Principle
+  // ============================================================================
+
+  // Formatar timestamp para exibição no chat
+  const formatTimestamp = useCallback((timestamp) => {
+    return timestamp.toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }, []);
+
+  // Criar nova mensagem para o chat
+  const createChatMessage = useCallback((type, content) => {
+    return {
+      id: Date.now(),
+      type,
+      content,
+      timestamp: new Date(),
+    };
+  }, []);
+
+  // Adicionar mensagem ao chat
+  const addMessageToChat = useCallback(
+    (type, content) => {
+      const newMessage = createChatMessage(type, content);
+      setMessages((prev) => [...prev, newMessage]);
+      return newMessage;
+    },
+    [createChatMessage]
+  );
+
+  // Scroll automático para última mensagem
+  const scrollToLatestMessage = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  }, []);
 
+  // Calcular número de linhas baseado no conteúdo
+  const calculateTextareaRows = useCallback((text) => {
+    const lines = text.split("\n").length;
+    return Math.min(
+      Math.max(lines, CHAT_CONFIG.MIN_ROWS),
+      CHAT_CONFIG.MAX_ROWS
+    );
+  }, []);
+
+  // ============================================================================
+  // HANDLERS DE EVENTOS
+  // ============================================================================
+
+  // Handler para mudança no input de texto
+  const handleInputChange = useCallback(
+    (event) => {
+      const value = event.target.value;
+      setInputMessage(value);
+      setInputRows(calculateTextareaRows(value));
+    },
+    [calculateTextareaRows]
+  );
+
+  // Handler para teclas pressionadas
+  const handleKeyPress = useCallback((event) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      handleSendMessage();
+    }
+  }, []);
+
+  // ============================================================================
+  // FUNÇÕES DE NEGÓCIO - Calibração de Micropipetas
+  // ============================================================================
+
+  // Gerar mensagem de sucesso específica para equipamentos
+  const generateSuccessMessage = useCallback((extractedData) => {
+    const equipmentType =
+      extractedData.tipoEquipamento === "repipetador"
+        ? "repipetador"
+        : extractedData.tipoInstrumento === "multicanal"
+        ? "micropipeta multicanal"
+        : "micropipeta monocanal";
+
+    return (
+      `✅ Perfeito! Identifiquei uma **${equipmentType}** da marca **${extractedData.marcaPipeta}**.\n\n` +
+      `📋 **Dados extraídos:**\n` +
+      `• Marca: ${extractedData.marcaPipeta}\n` +
+      `• Modelo: ${extractedData.modeloPipeta}\n` +
+      `• Série: ${extractedData.numeroPipeta}\n` +
+      `• Pontos de calibração: ${extractedData.pontosCalibra.length}\n` +
+      `${
+        extractedData.seringas
+          ? `• Seringas: ${extractedData.seringas.length}\n`
+          : ""
+      }` +
+      `\n🚀 Preenchendo formulário automaticamente...`
+    );
+  }, []);
+
+  // Processar dados de calibração com IA
+  const processCalibrationData = useCallback(
+    async (userInput) => {
+      const processingMessage = addMessageToChat(
+        "assistant",
+        "🤖 Processando seus dados..."
+      );
+
+      try {
+        // Extrair dados com IA
+        const extractedData = await extractPipetteData(userInput);
+
+        // Remover mensagem de processamento
+        setMessages((prev) =>
+          prev.filter((m) => m.id !== processingMessage.id)
+        );
+
+        // Adicionar mensagem de sucesso
+        const successMessage = generateSuccessMessage(extractedData);
+        addMessageToChat("assistant", successMessage);
+
+        // Aplicar dados extraídos
+        if (onDataExtracted) {
+          onDataExtracted(extractedData);
+        }
+
+        // Adicionar mensagem final e fechar chat
+        setTimeout(() => {
+          addMessageToChat(
+            "assistant",
+            "🎉 Formulário preenchido com sucesso! Você pode revisar os dados e gerar o certificado."
+          );
+
+          setTimeout(() => {
+            setIsOpen(false);
+          }, CHAT_CONFIG.AUTO_CLOSE_DELAY);
+        }, CHAT_CONFIG.SUCCESS_MESSAGE_DELAY);
+      } catch (processingError) {
+        // Remover mensagem de processamento
+        setMessages((prev) =>
+          prev.filter((m) => m.id !== processingMessage.id)
+        );
+
+        // Adicionar mensagem de erro específica
+        addMessageToChat(
+          "assistant",
+          `❌ **Ops! Encontrei um problema:**\n\n${processingError.message}\n\n` +
+            `💡 **Dica:** Verifique se os dados estão no formato correto do Notion.`
+        );
+      }
+    },
+    [
+      extractPipetteData,
+      addMessageToChat,
+      generateSuccessMessage,
+      onDataExtracted,
+    ]
+  );
+
+  // Handler principal para envio de mensagem
+  const handleSendMessage = useCallback(async () => {
+    if (!inputMessage.trim()) return;
+
+    // Adicionar mensagem do usuário
+    addMessageToChat("user", inputMessage);
+    const userInput = inputMessage;
+
+    // Reset do input
+    setInputMessage("");
+    setInputRows(CHAT_CONFIG.DEFAULT_ROWS);
+
+    // Processar dados
+    await processCalibrationData(userInput);
+  }, [inputMessage, addMessageToChat, processCalibrationData]);
+
+  // ============================================================================
+  // EFFECTS
+  // ============================================================================
+
+  // Auto-scroll quando mensagens mudam
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    scrollToLatestMessage();
+  }, [messages, scrollToLatestMessage]);
 
+  // Auto-focus quando chat abre
   useEffect(() => {
     if (isOpen && !isMinimized && inputRef.current) {
       inputRef.current.focus();
     }
   }, [isOpen, isMinimized]);
 
-  const addMessage = (type, content) => {
-    const newMessage = {
-      id: Date.now(),
-      type,
-      content,
-      timestamp: new Date(),
-    };
-    setMessages((prev) => [...prev, newMessage]);
-    return newMessage;
-  };
+  // ============================================================================
+  // RENDERIZAÇÃO CONDICIONAL
+  // ============================================================================
 
-  const handleSendMessage = async () => {
-    if (!inputMessage.trim()) return;
-
-    // Adicionar mensagem do usuário
-    addMessage("user", inputMessage);
-    const userInput = inputMessage;
-    setInputMessage("");
-    setInputRows(2); // Resetar para o estado normal
-
-    // Adicionar mensagem de processamento
-    const processingMessage = addMessage(
-      "assistant",
-      "🤖 Processando seus dados..."
-    );
-
-    try {
-      // Processar com IA
-      const data = await extractPipetteData(userInput);
-
-      // Remover mensagem de processamento
-      setMessages((prev) => prev.filter((m) => m.id !== processingMessage.id));
-
-      // Adicionar mensagem de sucesso
-      const instrumentType =
-        data.tipoEquipamento === "repipetador"
-          ? "repipetador"
-          : data.tipoInstrumento === "multicanal"
-          ? "micropipeta multicanal"
-          : "micropipeta monocanal";
-
-      addMessage(
-        "assistant",
-        `✅ Perfeito! Identifiquei uma **${instrumentType}** da marca **${data.marcaPipeta}**.\n\n` +
-          `📋 **Dados extraídos:**\n` +
-          `• Marca: ${data.marcaPipeta}\n` +
-          `• Modelo: ${data.modeloPipeta}\n` +
-          `• Série: ${data.numeroPipeta}\n` +
-          `• Pontos de calibração: ${data.pontosCalibra.length}\n` +
-          `${data.seringas ? `• Seringas: ${data.seringas.length}\n` : ""}` +
-          `\n🚀 Preenchendo formulário automaticamente...`
-      );
-
-      // Aplicar dados
-      if (onDataExtracted) {
-        onDataExtracted(data);
-      }
-
-      // Adicionar mensagem final
-      setTimeout(() => {
-        addMessage(
-          "assistant",
-          "🎉 Formulário preenchido com sucesso! Você pode revisar os dados e gerar o certificado."
-        );
-
-        // Fechar o chat automaticamente após o processamento
-        setTimeout(() => {
-          setIsOpen(false);
-        }, 800); // Reduzido para 800ms para fechamento mais rápido
-      }, 1000); // Reduzido para 1 segundo
-    } catch (err) {
-      // Remover mensagem de processamento
-      setMessages((prev) => prev.filter((m) => m.id !== processingMessage.id));
-
-      // Adicionar mensagem de erro
-      addMessage(
-        "assistant",
-        `❌ **Ops! Encontrei um problema:**\n\n${err.message}\n\n` +
-          `💡 **Dica:** Verifique se os dados estão no formato correto do Notion.`
-      );
-    }
-  };
-
-  const handleKeyPress = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
-
-  // Função para expandir textarea automaticamente
-  const handleInputChange = (e) => {
-    const value = e.target.value;
-    setInputMessage(value);
-
-    // Calcular número de linhas baseado no conteúdo
-    const lines = value.split("\n").length;
-    const calculatedRows = Math.min(Math.max(lines, 2), 8); // Min 2, Max 8 linhas
-    setInputRows(calculatedRows);
-  };
-
-  const formatTime = (timestamp) => {
-    return timestamp.toLocaleTimeString("pt-BR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  // Não renderizar se não deve aparecer nesta página
-  if (!showInCurrentPage) {
-    return null;
-  }
+  // ============================================================================
+  // RENDERIZAÇÃO PRINCIPAL
+  // ============================================================================
 
   // Renderizar usando portal para garantir que fique no nível mais alto do DOM
   return createPortal(
@@ -206,8 +342,9 @@ const AIChatAssistant = ({
                 <div
                   className="w-10 h-10 rounded-full flex items-center justify-center ai-header-logo"
                   style={{
-                    background:
-                      "linear-gradient(45deg, rgb(144, 199, 45) 0%, rgb(80, 120, 20) 20%, rgb(200, 255, 80) 40%, rgb(60, 100, 15) 60%, rgb(180, 240, 70) 80%, rgb(144, 199, 45) 100%)",
+                    background: `linear-gradient(45deg, ${AI_COLORS.GRADIENT_STOPS.join(
+                      ", "
+                    )})`,
                     backgroundSize: "400% 400%",
                     animation: "ai-gradient-flow 6s ease infinite",
                   }}
@@ -275,7 +412,7 @@ const AIChatAssistant = ({
                             : "text-gray-500"
                         }`}
                       >
-                        {formatTime(message.timestamp)}
+                        {formatTimestamp(message.timestamp)}
                       </div>
                     </div>
                   </div>
@@ -333,17 +470,19 @@ const AIChatAssistant = ({
                       disabled={!inputMessage.trim() || isProcessing}
                       className="flex-shrink-0 w-12 h-12 text-white rounded-xl hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-105 flex items-center justify-center"
                       style={{
-                        backgroundColor: "rgb(144, 199, 45)",
+                        backgroundColor: AI_COLORS.PRIMARY_GREEN,
                         minHeight: "48px",
                       }}
                       onMouseEnter={(e) => {
                         if (!e.target.disabled) {
-                          e.target.style.backgroundColor = "rgb(130, 180, 40)";
+                          e.target.style.backgroundColor =
+                            AI_COLORS.PRIMARY_GREEN_HOVER;
                         }
                       }}
                       onMouseLeave={(e) => {
                         if (!e.target.disabled) {
-                          e.target.style.backgroundColor = "rgb(144, 199, 45)";
+                          e.target.style.backgroundColor =
+                            AI_COLORS.PRIMARY_GREEN;
                         }
                       }}
                     >
@@ -360,11 +499,8 @@ const AIChatAssistant = ({
                         Velocidade de Preenchimento
                       </label>
                       <span className="text-xs text-gray-500">
-                        {animationSpeed === 1
-                          ? "Lenta"
-                          : animationSpeed === 2
-                          ? "Normal"
-                          : "Rápida"}
+                        {ANIMATION_CONFIG.SPEED_LABELS[animationSpeed] ||
+                          "Normal"}
                       </span>
                     </div>
                     <div className="flex items-center space-x-2">
@@ -379,7 +515,9 @@ const AIChatAssistant = ({
                         }
                         className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
                         style={{
-                          background: `linear-gradient(to right, rgb(144, 199, 45) 0%, rgb(144, 199, 45) ${
+                          background: `linear-gradient(to right, ${
+                            AI_COLORS.PRIMARY_GREEN
+                          } 0%, ${AI_COLORS.PRIMARY_GREEN} ${
                             ((animationSpeed - 1) / 2) * 100
                           }%, #e5e7eb ${
                             ((animationSpeed - 1) / 2) * 100
