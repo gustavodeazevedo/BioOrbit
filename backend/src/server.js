@@ -5,42 +5,77 @@ require('dotenv').config();
 
 const app = express();
 
-// Configuração CORS explícita
+// Configuração CORS mais permissiva para produção
 const corsOptions = {
-    origin: [
-        'http://localhost:5173',
-        'http://localhost:4173',
-        'https://bio-orbit.vercel.app',
-        'https://bioorbit.vercel.app',
-        'https://www.bio-orbit.vercel.app',
-        process.env.FRONTEND_URL
-    ].filter(Boolean), // Remove valores undefined
+    origin: function (origin, callback) {
+        // Permitir requisições sem origin (ex: mobile apps, Postman)
+        if (!origin) return callback(null, true);
+
+        const allowedOrigins = [
+            'http://localhost:5173',
+            'http://localhost:4173',
+            'https://bio-orbit.vercel.app',
+            'https://bioorbit.vercel.app',
+            'https://www.bio-orbit.vercel.app',
+            process.env.FRONTEND_URL
+        ].filter(Boolean);
+
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            console.log('Origin bloqueado pelo CORS:', origin);
+            callback(null, true); // Temporariamente permitir todas as origens para debug
+        }
+    },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-    optionsSuccessStatus: 200 // Para compatibilidade com navegadores legados
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'X-Requested-With',
+        'Accept',
+        'Origin',
+        'Cache-Control',
+        'X-File-Name'
+    ],
+    exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar'],
+    optionsSuccessStatus: 200,
+    preflightContinue: false
 };
 
-// Middlewares
+// Middleware CORS deve vir ANTES de tudo
 app.use(cors(corsOptions));
-app.use(express.json());
 
-// Middleware de debug para CORS
+// Middleware para tratar OPTIONS explicitamente
 app.use((req, res, next) => {
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.url} - Origin: ${req.get('Origin')}`);
+    if (req.method === 'OPTIONS') {
+        res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+        res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS,PATCH');
+        res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,Accept,Origin,Cache-Control,X-File-Name');
+        res.header('Access-Control-Allow-Credentials', 'true');
+        return res.status(200).end();
+    }
     next();
 });
 
-// Middleware adicional para OPTIONS
-app.options('*', cors(corsOptions));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Middleware de debug para CORS e requisições
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    console.log('Origin:', req.get('Origin'));
+    console.log('User-Agent:', req.get('User-Agent'));
+    next();
+});
 
 // Conexão com o MongoDB
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/biocalib', {
     useNewUrlParser: true,
     useUnifiedTopology: true,
-    serverSelectionTimeoutMS: 30000, // Aumenta o timeout para 30 segundos
-    socketTimeoutMS: 45000, // Aumenta o timeout do socket para 45 segundos
-    connectTimeoutMS: 30000, // Aumenta o timeout de conexão para 30 segundos
+    serverSelectionTimeoutMS: 30000,
+    socketTimeoutMS: 45000,
+    connectTimeoutMS: 30000,
 })
     .then(() => console.log('Conectado ao MongoDB'))
     .catch(err => console.error('Erro ao conectar ao MongoDB:', err));
@@ -49,39 +84,43 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/biocalib'
 app.use('/api/equipamentos', require('./routes/equipamentos'));
 app.use('/api/calibracoes', require('./routes/calibracoes'));
 app.use('/api/usuarios', require('./routes/usuarios'));
-app.use('/api/admin/token', require('./routes/token')); // Adicionando rotas de gerenciamento de token
-app.use('/api/clientes', require('./routes/clientes')); // Adicionando rotas de clientes
+app.use('/api/admin/token', require('./routes/token'));
+app.use('/api/clientes', require('./routes/clientes'));
 
 // Rota de health check
 app.get('/health', (req, res) => {
     res.status(200).json({
         status: 'OK',
         timestamp: new Date().toISOString(),
-        mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+        mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+        cors: 'enabled'
     });
 });
 
 // Rota de teste CORS (pública)
 app.get('/api/test', (req, res) => {
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
     res.status(200).json({
         message: 'CORS test successful',
         origin: req.get('Origin'),
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        method: req.method
     });
 });
 
 // Rota padrão
 app.get('/', (req, res) => {
     res.send('API do BioCalib funcionando!');
-});// Middleware de tratamento de erros
-app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).json({ error: 'Algo deu errado!' });
 });
 
-// Health check para o Render
-app.get('/health', (req, res) => {
-    res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
+// Middleware de tratamento de erros
+app.use((err, req, res, next) => {
+    console.error('Erro capturado:', err.stack);
+    res.status(500).json({
+        error: 'Algo deu errado!',
+        message: err.message,
+        timestamp: new Date().toISOString()
+    });
 });
 
 // Iniciar servidor
