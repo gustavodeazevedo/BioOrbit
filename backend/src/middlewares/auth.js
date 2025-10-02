@@ -1,9 +1,6 @@
 const jwt = require('jsonwebtoken');
 const Usuario = require('../models/Usuario');
 
-const jwt = require('jsonwebtoken');
-const Usuario = require('../models/Usuario');
-
 // Middleware para proteger rotas - verifica se o usuário está autenticado
 const protect = async (req, res, next) => {
     let token;
