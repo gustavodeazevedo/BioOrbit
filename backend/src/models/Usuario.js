@@ -32,6 +32,15 @@ const usuarioSchema = mongoose.Schema({
         type: Boolean,
         required: true,
         default: false
+    },
+    status: {
+        type: String,
+        enum: ['online', 'offline'],
+        default: 'offline'
+    },
+    ultimoHeartbeat: {
+        type: Date,
+        default: null
     }
 }, {
     timestamps: true
