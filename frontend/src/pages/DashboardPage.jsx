@@ -47,17 +47,20 @@ const DashboardPage = () => {
 
   // Carregar usuários ativos
   const loadActiveUsers = async () => {
+    console.log("🔄 Iniciando carregamento de usuários ativos...");
     setLoadingUsers(true);
     try {
       const users = await presenceService.getActiveUsers();
+      console.log("👥 Usuários recebidos do serviço:", users);
       const usersWithColors = users.map((u, index) => ({
         ...u,
         color: avatarColors[index % avatarColors.length],
         isCurrentUser: u._id === user?._id,
       }));
+      console.log("🎨 Usuários com cores aplicadas:", usersWithColors);
       setActiveUsers(usersWithColors);
     } catch (error) {
-      console.error("Erro ao carregar usuários ativos:", error);
+      console.error("❌ Erro ao carregar usuários ativos:", error);
     } finally {
       setLoadingUsers(false);
     }
@@ -65,13 +68,20 @@ const DashboardPage = () => {
 
   // Iniciar tracking de presença e carregar usuários
   useEffect(() => {
+    console.log("🚀 Dashboard montado, iniciando tracking de presença...");
+    console.log("👤 Usuário atual:", user);
+
     presenceService.startTracking();
     loadActiveUsers();
 
     // Atualizar lista de usuários ativos a cada 30 segundos
-    const interval = setInterval(loadActiveUsers, 30000);
+    const interval = setInterval(() => {
+      console.log("⏰ Atualizando lista de usuários ativos (intervalo de 30s)");
+      loadActiveUsers();
+    }, 30000);
 
     return () => {
+      console.log("🛑 Dashboard desmontado, parando tracking...");
       presenceService.stopTracking();
       clearInterval(interval);
     };
