@@ -2,6 +2,28 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/usuarios` : 'http://localhost:5000/api/usuarios';
 
+// Criar instância do axios configurada
+export const api = axios.create({
+    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+});
+
+// Adicionar token JWT aos headers automaticamente
+api.interceptors.request.use(
+    (config) => {
+        const userInfo = localStorage.getItem('userInfo');
+        if (userInfo) {
+            const user = JSON.parse(userInfo);
+            if (user.token) {
+                config.headers.Authorization = `Bearer ${user.token}`;
+            }
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
+);
+
 // Serviço para autenticação de usuários
 const authService = {
     // Login de usuário com token corporativo
