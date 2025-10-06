@@ -8,7 +8,10 @@ const {
     getUsuarios,
     getUsuarioById,
     updateUsuario,
-    deleteUsuario
+    deleteUsuario,
+    updateHeartbeat,
+    setOffline,
+    getUsuariosAtivos
 } = require('../controllers/usuariosController');
 const { protect, admin } = require('../middlewares/auth');
 const { verifyToken } = require('../middlewares/tokenVerification');
@@ -32,6 +35,21 @@ router.get('/perfil', protect, getUsuarioPerfil);
 // @desc    Update user profile
 // @access  Private
 router.put('/perfil', protect, updateUsuarioPerfil);
+
+// @route   POST /api/usuarios/heartbeat
+// @desc    Update user heartbeat (presence)
+// @access  Private
+router.post('/heartbeat', protect, updateHeartbeat);
+
+// @route   POST /api/usuarios/offline
+// @desc    Set user status to offline
+// @access  Private
+router.post('/offline', protect, setOffline);
+
+// @route   GET /api/usuarios/ativos
+// @desc    Get active users
+// @access  Private
+router.get('/ativos', protect, getUsuariosAtivos);
 
 // @route   GET /api/usuarios
 // @desc    Get all usuarios
