@@ -234,7 +234,7 @@ const deleteUsuario = async (req, res) => {
 // @access  Private
 const updateHeartbeat = async (req, res) => {
     try {
-        const usuario = await Usuario.findById(req.user._id);
+        const usuario = await Usuario.findById(req.usuario._id);
 
         if (usuario) {
             usuario.ultimoHeartbeat = new Date();
@@ -254,7 +254,7 @@ const updateHeartbeat = async (req, res) => {
 // @access  Private
 const setOffline = async (req, res) => {
     try {
-        const usuario = await Usuario.findById(req.user._id);
+        const usuario = await Usuario.findById(req.usuario._id);
 
         if (usuario) {
             usuario.status = 'offline';
