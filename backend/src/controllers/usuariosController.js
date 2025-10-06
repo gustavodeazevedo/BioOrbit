@@ -229,6 +229,65 @@ const deleteUsuario = async (req, res) => {
     }
 };
 
+// @desc    Atualizar heartbeat do usuário (presença)
+// @route   POST /api/usuarios/heartbeat
+// @access  Private
+const updateHeartbeat = async (req, res) => {
+    try {
+        const usuario = await Usuario.findById(req.user._id);
+
+        if (usuario) {
+            usuario.ultimoHeartbeat = new Date();
+            usuario.status = 'online';
+            await usuario.save();
+            res.json({ message: 'Heartbeat atualizado' });
+        } else {
+            res.status(404).json({ message: 'Usuário não encontrado' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Marcar usuário como offline
+// @route   POST /api/usuarios/offline
+// @access  Private
+const setOffline = async (req, res) => {
+    try {
+        const usuario = await Usuario.findById(req.user._id);
+
+        if (usuario) {
+            usuario.status = 'offline';
+            await usuario.save();
+            res.json({ message: 'Status atualizado para offline' });
+        } else {
+            res.status(404).json({ message: 'Usuário não encontrado' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Obter usuários ativos
+// @route   GET /api/usuarios/ativos
+// @access  Private
+const getUsuariosAtivos = async (req, res) => {
+    try {
+        const umMinutoAtras = new Date(Date.now() - 60000); // 1 minuto atrás
+
+        const usuariosAtivos = await Usuario.find({
+            verificado: true,
+            ultimoHeartbeat: { $gte: umMinutoAtras }
+        })
+            .select('nome email cargo setor ultimoHeartbeat')
+            .sort({ ultimoHeartbeat: -1 });
+
+        res.json(usuariosAtivos);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     authUsuario,
     registerUsuario,
@@ -237,5 +296,8 @@ module.exports = {
     getUsuarios,
     getUsuarioById,
     updateUsuario,
-    deleteUsuario
+    deleteUsuario,
+    updateHeartbeat,
+    setOffline,
+    getUsuariosAtivos
 };
