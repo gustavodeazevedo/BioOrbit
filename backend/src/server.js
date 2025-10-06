@@ -8,8 +8,13 @@ const app = express();
 // Configuração CORS mais permissiva para produção
 const corsOptions = {
     origin: function (origin, callback) {
+        console.log('CORS - Origin recebido:', origin);
+        
         // Permitir requisições sem origin (ex: mobile apps, Postman)
-        if (!origin) return callback(null, true);
+        if (!origin) {
+            console.log('CORS - Permitindo requisição sem origin');
+            return callback(null, true);
+        }
 
         const allowedOrigins = [
             'http://localhost:5173',
@@ -17,14 +22,24 @@ const corsOptions = {
             'https://bio-orbit.vercel.app',
             'https://bioorbit.vercel.app',
             'https://www.bio-orbit.vercel.app',
+            'https://bio-orbit-git-desenvolvimento-gustavodeazevedos-projects.vercel.app',
             process.env.FRONTEND_URL
         ].filter(Boolean);
 
-        if (allowedOrigins.indexOf(origin) !== -1) {
+        console.log('CORS - Origins permitidos:', allowedOrigins);
+
+        // Permitir qualquer subdomínio do Vercel ou localhost
+        const isVercelDomain = origin.includes('.vercel.app');
+        const isLocalhost = origin.includes('localhost');
+        const isAllowedOrigin = allowedOrigins.includes(origin);
+
+        if (isAllowedOrigin || isVercelDomain || isLocalhost) {
+            console.log('CORS - Origin permitido:', origin);
             callback(null, true);
         } else {
-            console.log('Origin bloqueado pelo CORS:', origin);
-            callback(null, true); // Temporariamente permitir todas as origens para debug
+            console.log('CORS - Origin bloqueado, mas permitindo temporariamente:', origin);
+            // Em produção, permitir temporariamente para debug
+            callback(null, true);
         }
     },
     credentials: true,
@@ -36,7 +51,8 @@ const corsOptions = {
         'Accept',
         'Origin',
         'Cache-Control',
-        'X-File-Name'
+        'X-File-Name',
+        'Access-Control-Allow-Origin'
     ],
     exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar'],
     optionsSuccessStatus: 200,
@@ -46,15 +62,28 @@ const corsOptions = {
 // Middleware CORS deve vir ANTES de tudo
 app.use(cors(corsOptions));
 
-// Middleware para tratar OPTIONS explicitamente
+// Middleware adicional para garantir headers CORS em todas as respostas
 app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    console.log('Middleware CORS - Origin:', origin);
+    
+    // Definir headers CORS manualmente para garantir compatibilidade
+    if (origin && (origin.includes('vercel.app') || origin.includes('localhost'))) {
+        res.header('Access-Control-Allow-Origin', origin);
+    } else {
+        res.header('Access-Control-Allow-Origin', '*');
+    }
+    
+    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS,PATCH');
+    res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,Accept,Origin,Cache-Control,X-File-Name');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    
+    // Se for uma requisição OPTIONS, responder imediatamente
     if (req.method === 'OPTIONS') {
-        res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-        res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS,PATCH');
-        res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,Accept,Origin,Cache-Control,X-File-Name');
-        res.header('Access-Control-Allow-Credentials', 'true');
+        console.log('Respondendo OPTIONS para:', req.url);
         return res.status(200).end();
     }
+    
     next();
 });
 
