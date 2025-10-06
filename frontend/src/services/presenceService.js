@@ -1,4 +1,4 @@
-import api from './authService';
+import { api } from './authService';
 
 class PresenceService {
     constructor() {
@@ -9,15 +9,19 @@ class PresenceService {
 
     // Iniciar rastreamento de presença
     startTracking() {
+        console.log('🎯 Iniciando tracking de presença...');
         this.sendHeartbeat();
         this.heartbeatInterval = setInterval(() => {
+            console.log('⏰ Intervalo de heartbeat acionado (30s)');
             this.sendHeartbeat();
         }, this.HEARTBEAT_INTERVAL);
 
         // Detectar quando o usuário sai da página
         window.addEventListener('beforeunload', () => {
+            console.log('👋 Usuário saindo, marcando como offline...');
             this.stopTracking();
         });
+        console.log('✅ Tracking de presença iniciado');
     }
 
     // Parar rastreamento
@@ -32,11 +36,13 @@ class PresenceService {
     // Enviar heartbeat ao backend
     async sendHeartbeat() {
         try {
-            await api.post('/usuarios/heartbeat', {
+            console.log('🔄 Enviando heartbeat...');
+            const response = await api.post('/usuarios/heartbeat', {
                 timestamp: new Date().toISOString()
             });
+            console.log('✅ Heartbeat enviado com sucesso:', response.data);
         } catch (error) {
-            console.error('Erro ao enviar heartbeat:', error);
+            console.error('❌ Erro ao enviar heartbeat:', error.response?.data || error.message);
         }
     }
 
@@ -52,10 +58,12 @@ class PresenceService {
     // Obter usuários ativos
     async getActiveUsers() {
         try {
+            console.log('📋 Buscando usuários ativos...');
             const response = await api.get('/usuarios/ativos');
+            console.log('✅ Usuários ativos recebidos:', response.data);
             return response.data;
         } catch (error) {
-            console.error('Erro ao buscar usuários ativos:', error);
+            console.error('❌ Erro ao buscar usuários ativos:', error.response?.data || error.message);
             return [];
         }
     }
