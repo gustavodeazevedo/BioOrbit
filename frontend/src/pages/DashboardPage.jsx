@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import presenceService from "../services/presenceService";
+import socketService from "../services/socketService";
 import {
   Home,
   Users,
@@ -66,26 +67,54 @@ const DashboardPage = () => {
     }
   };
 
-  // Iniciar tracking de presença e carregar usuários
+  // Iniciar tracking de presença e WebSocket
   useEffect(() => {
     console.log("🚀 Dashboard montado, iniciando tracking de presença...");
     console.log("👤 Usuário atual:", user);
 
+    // Conectar Socket.IO
+    if (user) {
+      const userData = {
+        _id: user._id,
+        nome: user.nome,
+        email: user.email,
+        cargo: user.cargo,
+        setor: user.setor,
+      };
+
+      socketService.connect(userData);
+
+      // Callback para atualizar usuários em tempo real
+      socketService.onUsersUpdate((users) => {
+        console.log("⚡ Atualização instantânea de usuários:", users);
+        const usersWithColors = users.map((u, index) => ({
+          ...u,
+          color: avatarColors[index % avatarColors.length],
+          isCurrentUser: u._id === user._id,
+        }));
+        setActiveUsers(usersWithColors);
+      });
+    }
+
+    // Fallback: usar API REST caso WebSocket falhe
     presenceService.startTracking();
     loadActiveUsers();
 
-    // Atualizar lista de usuários ativos a cada 30 segundos
+    // Backup: atualizar via API a cada 30 segundos
     const interval = setInterval(() => {
-      console.log("⏰ Atualizando lista de usuários ativos (intervalo de 30s)");
-      loadActiveUsers();
+      console.log("⏰ Backup: Atualizando via API (30s)");
+      if (!socketService.isConnected) {
+        loadActiveUsers();
+      }
     }, 30000);
 
     return () => {
       console.log("🛑 Dashboard desmontado, parando tracking...");
+      socketService.disconnect();
       presenceService.stopTracking();
       clearInterval(interval);
     };
-  }, []);
+  }, [user]);
 
   // Atualizar quando abrir o modal
   useEffect(() => {
