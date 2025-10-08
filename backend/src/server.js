@@ -1,15 +1,18 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const http = require('http');
+const { Server } = require('socket.io');
 require('dotenv').config();
 
 const app = express();
+const server = http.createServer(app);
 
 // Configuração CORS mais permissiva para produção
 const corsOptions = {
     origin: function (origin, callback) {
         console.log('CORS - Origin recebido:', origin);
-        
+
         // Permitir requisições sem origin (ex: mobile apps, Postman)
         if (!origin) {
             console.log('CORS - Permitindo requisição sem origin');
@@ -62,28 +65,75 @@ const corsOptions = {
 // Middleware CORS deve vir ANTES de tudo
 app.use(cors(corsOptions));
 
+// Configurar Socket.IO com CORS
+const io = new Server(server, {
+    cors: corsOptions
+});
+
+// Armazenar usuários online
+const onlineUsers = new Map();
+
+// Configurar eventos Socket.IO
+io.on('connection', (socket) => {
+    console.log('🔌 Cliente conectado:', socket.id);
+
+    // Usuário entra online
+    socket.on('user:online', (userData) => {
+        console.log('👤 Usuário online:', userData.nome);
+        onlineUsers.set(socket.id, {
+            socketId: socket.id,
+            ...userData,
+            lastSeen: new Date()
+        });
+
+        // Notificar todos sobre atualização de usuários
+        io.emit('users:update', Array.from(onlineUsers.values()));
+    });
+
+    // Heartbeat
+    socket.on('user:heartbeat', (userData) => {
+        if (onlineUsers.has(socket.id)) {
+            onlineUsers.set(socket.id, {
+                ...onlineUsers.get(socket.id),
+                lastSeen: new Date()
+            });
+        }
+    });
+
+    // Usuário desconecta
+    socket.on('disconnect', () => {
+        console.log('🔌 Cliente desconectado:', socket.id);
+        const user = onlineUsers.get(socket.id);
+        if (user) {
+            console.log('👋 Usuário offline:', user.nome);
+            onlineUsers.delete(socket.id);
+            io.emit('users:update', Array.from(onlineUsers.values()));
+        }
+    });
+});
+
 // Middleware adicional para garantir headers CORS em todas as respostas
 app.use((req, res, next) => {
     const origin = req.headers.origin;
     console.log('Middleware CORS - Origin:', origin);
-    
+
     // Definir headers CORS manualmente para garantir compatibilidade
     if (origin && (origin.includes('vercel.app') || origin.includes('localhost'))) {
         res.header('Access-Control-Allow-Origin', origin);
     } else {
         res.header('Access-Control-Allow-Origin', '*');
     }
-    
+
     res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS,PATCH');
     res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,Accept,Origin,Cache-Control,X-File-Name');
     res.header('Access-Control-Allow-Credentials', 'true');
-    
+
     // Se for uma requisição OPTIONS, responder imediatamente
     if (req.method === 'OPTIONS') {
         console.log('Respondendo OPTIONS para:', req.url);
         return res.status(200).end();
     }
-    
+
     next();
 });
 
@@ -154,7 +204,8 @@ app.use((err, req, res, next) => {
 
 // Iniciar servidor
 const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, '0.0.0.0', () => {
     console.log(`Servidor rodando na porta ${PORT}`);
     console.log(`Ambiente: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`Socket.IO habilitado para real-time`);
 });
