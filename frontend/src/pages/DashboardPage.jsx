@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import presenceService from "../services/presenceService";
-import socketService from "../services/socketService";
 import {
   Home,
   Users,
@@ -72,45 +71,18 @@ const DashboardPage = () => {
     console.log("🚀 Dashboard montado, iniciando tracking de presença...");
     console.log("👤 Usuário atual:", user);
 
-    // Conectar Socket.IO
-    if (user) {
-      const userData = {
-        _id: user._id,
-        nome: user.nome,
-        email: user.email,
-        cargo: user.cargo,
-        setor: user.setor,
-      };
-
-      socketService.connect(userData);
-
-      // Callback para atualizar usuários em tempo real
-      socketService.onUsersUpdate((users) => {
-        console.log("⚡ Atualização instantânea de usuários:", users);
-        const usersWithColors = users.map((u, index) => ({
-          ...u,
-          color: avatarColors[index % avatarColors.length],
-          isCurrentUser: u._id === user._id,
-        }));
-        setActiveUsers(usersWithColors);
-      });
-    }
-
-    // Fallback: usar API REST caso WebSocket falhe
+    // Iniciar tracking de presença via HTTP
     presenceService.startTracking();
     loadActiveUsers();
 
-    // Backup: atualizar via API a cada 30 segundos
+    // Atualizar via API a cada 30 segundos
     const interval = setInterval(() => {
-      console.log("⏰ Backup: Atualizando via API (30s)");
-      if (!socketService.isConnected) {
-        loadActiveUsers();
-      }
+      console.log("⏰ Atualizando usuários ativos via API (30s)");
+      loadActiveUsers();
     }, 30000);
 
     return () => {
       console.log("🛑 Dashboard desmontado, parando tracking...");
-      socketService.disconnect();
       presenceService.stopTracking();
       clearInterval(interval);
     };
