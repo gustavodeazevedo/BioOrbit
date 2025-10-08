@@ -67,7 +67,16 @@ app.use(cors(corsOptions));
 
 // Configurar Socket.IO com CORS
 const io = new Server(server, {
-    cors: corsOptions
+    cors: corsOptions,
+    // Configurações para deploy (Render)
+    transports: ['websocket', 'polling'],
+    allowEIO3: true,
+    pingTimeout: 60000,
+    pingInterval: 25000,
+    // Permitir requisições de upgrade HTTP para WebSocket
+    allowUpgrades: true,
+    // Cookie necessário para algumas plataformas
+    cookie: false
 });
 
 // Armazenar usuários online
@@ -208,4 +217,6 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log(`Servidor rodando na porta ${PORT}`);
     console.log(`Ambiente: ${process.env.NODE_ENV || 'development'}`);
     console.log(`Socket.IO habilitado para real-time`);
+    console.log(`✅ WebSocket configurado com transports: ['websocket', 'polling']`);
+    console.log(`🔌 Socket.IO pronto para conexões em: ws://localhost:${PORT}`);
 });
