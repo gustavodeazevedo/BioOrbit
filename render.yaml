@@ -7,6 +7,16 @@ services:
     rootDir: backend
     startCommand: npm start
     buildCommand: npm install
+    # Habilitar WebSocket no Render
+    autoDeploy: true
+    # Configuração para permitir conexões WebSocket
+    headers:
+      - path: /*
+        name: Connection
+        value: Upgrade
+      - path: /*
+        name: Upgrade
+        value: websocket
     envVars:
       - key: NODE_ENV
         value: production
