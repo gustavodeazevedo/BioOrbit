@@ -530,11 +530,17 @@ export class PDFService {    /**
         });
 
         // Ordenar canais numericamente
-        const canaisOrdenados = Object.keys(pontosPorCanal).sort((a, b) => parseInt(a) - parseInt(b)); canaisOrdenados.forEach((canal, canalIndex) => {
+        const canaisOrdenados = Object.keys(pontosPorCanal).sort((a, b) => parseInt(a) - parseInt(b));
+
+        canaisOrdenados.forEach((canal, canalIndex) => {
             const pontosDoCanal = pontosPorCanal[canal];
 
-            // Ordenar pontos do canal por pontoPosicao
-            pontosDoCanal.sort((a, b) => (a.pontoPosicao || 0) - (b.pontoPosicao || 0));
+            // Ordenar pontos do canal do menor para o maior volume
+            pontosDoCanal.sort((a, b) => {
+                const volumeA = parseFloat(a.volumeNominal) || 0;
+                const volumeB = parseFloat(b.volumeNominal) || 0;
+                return volumeA - volumeB;
+            });
 
             // Criar as tabelas dos pontos deste canal usando numeração baseada em pontoPosicao
             const tabelasDoCanal = PDFService.criarTabelasLadoALadoMulticanal(pontosDoCanal);
@@ -604,8 +610,11 @@ export class PDFService {    /**
                     return colunas;
                 }
 
+                // Usar numeração sequencial baseada na posição global após ordenação
+                const numeroPonto = i + indice + 1;
+
                 const colunas = [
-                    { text: `Ponto ${ponto.pontoPosicao || (indice + 1)} de medição`, style: 'staticTextTable', fontSize: configFixa.fontSize, bold: true },
+                    { text: `Ponto ${numeroPonto} de medição`, style: 'staticTextTable', fontSize: configFixa.fontSize, bold: true },
                     { text: ':', style: 'staticTextTable', alignment: 'center', fontSize: configFixa.fontSize },
                     { text: `${ponto.volumeNominal}${ponto.unidade || 'µL'}`, style: 'dynamicText', fontSize: configFixa.fontSize, bold: true }
                 ];
@@ -705,7 +714,14 @@ export class PDFService {    /**
     static criarTabelasVerticais(pontosCalibra) {
         const tabelas = [];
 
-        pontosCalibra.forEach((ponto, index) => {
+        // Ordenar pontos do menor para o maior volume
+        const pontosOrdenados = [...pontosCalibra].sort((a, b) => {
+            const volumeA = parseFloat(a.volumeNominal) || 0;
+            const volumeB = parseFloat(b.volumeNominal) || 0;
+            return volumeA - volumeB;
+        });
+
+        pontosOrdenados.forEach((ponto, index) => {
             tabelas.push({
                 table: {
                     headerRows: 0,
@@ -765,11 +781,18 @@ export class PDFService {    /**
             return [];
         }
 
+        // Ordenar pontos do menor para o maior volume
+        const pontosOrdenados = [...pontosCalibra].sort((a, b) => {
+            const volumeA = parseFloat(a.volumeNominal) || 0;
+            const volumeB = parseFloat(b.volumeNominal) || 0;
+            return volumeA - volumeB;
+        });
+
         const tabelas = [];
         const PONTOS_POR_LINHA = 3;
 
-        for (let i = 0; i < pontosCalibra.length; i += PONTOS_POR_LINHA) {
-            const pontosNessaLinha = pontosCalibra.slice(i, i + PONTOS_POR_LINHA);
+        for (let i = 0; i < pontosOrdenados.length; i += PONTOS_POR_LINHA) {
+            const pontosNessaLinha = pontosOrdenados.slice(i, i + PONTOS_POR_LINHA);
             const quantidadePontos = pontosNessaLinha.length;            // Configuração de larguras das colunas com base na quantidade de pontos
             const configuracoes = {
                 1: {
@@ -901,7 +924,14 @@ export class PDFService {    /**
     static criarBlocosMedicoes(pontosCalibra) {
         const blocos = [];
 
-        pontosCalibra.forEach((ponto, index) => {
+        // Ordenar pontos do menor para o maior volume
+        const pontosOrdenados = [...pontosCalibra].sort((a, b) => {
+            const volumeA = parseFloat(a.volumeNominal) || 0;
+            const volumeB = parseFloat(b.volumeNominal) || 0;
+            return volumeA - volumeB;
+        });
+
+        pontosOrdenados.forEach((ponto, index) => {
             blocos.push({
                 text: [
                     { text: `Ponto ${index + 1} de medição        : `, style: 'staticText' },
@@ -1085,7 +1115,16 @@ export class PDFService {    /**
             return [];
         }
 
-        const tabelas = []; seringas.forEach((seringa, seringaIndex) => {
+        const tabelas = [];
+
+        // Ordenar seringas do menor para o maior volume
+        const seringasOrdenadas = [...seringas].sort((a, b) => {
+            const volumeA = parseFloat(a.volumeNominal) || 0;
+            const volumeB = parseFloat(b.volumeNominal) || 0;
+            return volumeA - volumeB;
+        });
+
+        seringasOrdenadas.forEach((seringa, seringaIndex) => {
             // Título da seringa
             tabelas.push({
                 text: `Seringa de ${seringa.volumeNominal}${seringa.unidade || 'µL'}:`,
