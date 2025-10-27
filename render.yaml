@@ -16,6 +16,10 @@ services:
         generateValue: true
       - key: CORPORATE_TOKEN
         value: BioKeyOne
+      - key: RESEND_API_KEY
+        value: re_3GG6rh3J_23meGpp6kNMNsy1p8TweB1V8
+      - key: RESEND_FROM_EMAIL
+        value: bioorbit@resend.dev
       - key: FRONTEND_URL
         value: https://bio-orbit.vercel.app
     healthCheckPath: /health
