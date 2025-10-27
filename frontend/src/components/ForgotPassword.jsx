@@ -61,11 +61,11 @@ function ForgotPassword({ switchToLogin }) {
             "Muitas solicitações. Por favor, aguarde alguns minutos antes de tentar novamente."
         );
       } else if (error.response?.status === 403) {
-        // Erro específico do SendGrid
+        // Erro específico do serviço de email
         setError(
           "Erro no serviço de email. Por favor, entre em contato com o suporte."
         );
-        console.error("SendGrid error:", error.response?.data);
+        console.error("Email service error:", error.response?.data);
       } else {
         setError(
           error.response?.data?.message || "Erro ao processar a solicitação"

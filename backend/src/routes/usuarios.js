@@ -11,7 +11,9 @@ const {
     deleteUsuario,
     updateHeartbeat,
     setOffline,
-    getUsuariosAtivos
+    getUsuariosAtivos,
+    requestPasswordReset,
+    resetPassword
 } = require('../controllers/usuariosController');
 const { protect, admin } = require('../middlewares/auth');
 const { verifyToken } = require('../middlewares/tokenVerification');
@@ -25,6 +27,16 @@ router.post('/login', verifyToken, authUsuario);
 // @desc    Register a usuario
 // @access  Public
 router.post('/', verifyToken, registerUsuario);
+
+// @route   POST /api/usuarios/reset-password
+// @desc    Request password reset
+// @access  Public
+router.post('/reset-password', requestPasswordReset);
+
+// @route   POST /api/usuarios/reset-password/:token
+// @desc    Reset password with token
+// @access  Public
+router.post('/reset-password/:token', resetPassword);
 
 // @route   GET /api/usuarios/perfil
 // @desc    Get user profile

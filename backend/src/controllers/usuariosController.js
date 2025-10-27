@@ -1,5 +1,8 @@
 const Usuario = require('../models/Usuario');
+const ResetToken = require('../models/ResetToken');
+const emailService = require('../services/emailService');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
 // Função para gerar token JWT
 const generateToken = (id) => {
@@ -288,6 +291,119 @@ const getUsuariosAtivos = async (req, res) => {
     }
 };
 
+// @desc    Solicitar recuperação de senha
+// @route   POST /api/usuarios/reset-password
+// @access  Public
+const requestPasswordReset = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ message: 'Email é obrigatório' });
+        }
+
+        // Buscar usuário
+        const usuario = await Usuario.findOne({ email }).maxTimeMS(15000);
+
+        // Sempre retornar sucesso por segurança (não revelar se email existe)
+        if (!usuario) {
+            console.log(`Tentativa de reset para email não cadastrado: ${email}`);
+            return res.json({
+                message: 'Se o email estiver cadastrado, você receberá as instruções de recuperação.'
+            });
+        }
+
+        // Gerar token único
+        const token = crypto.randomBytes(32).toString('hex');
+
+        // Salvar token no banco
+        await ResetToken.create({
+            usuario: usuario._id,
+            token: token
+        });
+
+        // URL de reset (frontend)
+        const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/redefinir-senha/${token}`;
+
+        // Enviar email
+        await emailService.sendPasswordResetEmail(
+            usuario.email,
+            usuario.nome,
+            resetUrl
+        );
+
+        console.log(`Email de recuperação enviado para: ${usuario.email}`);
+
+        res.json({
+            message: 'Email de recuperação enviado. Verifique sua caixa de entrada.'
+        });
+
+    } catch (error) {
+        console.error('Erro ao solicitar reset de senha:', error);
+        res.status(500).json({
+            message: 'Erro ao processar solicitação. Tente novamente mais tarde.'
+        });
+    }
+};
+
+// @desc    Redefinir senha com token
+// @route   POST /api/usuarios/reset-password/:token
+// @access  Public
+const resetPassword = async (req, res) => {
+    try {
+        const { token } = req.params;
+        const { senha } = req.body;
+
+        if (!senha) {
+            return res.status(400).json({ message: 'Nova senha é obrigatória' });
+        }
+
+        if (senha.length < 6) {
+            return res.status(400).json({ message: 'Senha deve ter no mínimo 6 caracteres' });
+        }
+
+        // Buscar token válido
+        const resetToken = await ResetToken.findOne({
+            token: token,
+            usado: false,
+            expiresAt: { $gt: new Date() }
+        }).populate('usuario');
+
+        if (!resetToken) {
+            return res.status(400).json({
+                message: 'Token inválido ou expirado. Solicite uma nova recuperação.'
+            });
+        }
+
+        // Atualizar senha do usuário
+        const usuario = resetToken.usuario;
+        usuario.senha = senha; // O hash será feito pelo pre-save hook do modelo
+        await usuario.save();
+
+        // Marcar token como usado
+        resetToken.usado = true;
+        await resetToken.save();
+
+        // Enviar email de confirmação
+        await emailService.sendPasswordResetConfirmation(
+            usuario.email,
+            usuario.nome
+        );
+
+        console.log(`Senha redefinida com sucesso para: ${usuario.email}`);
+
+        res.json({
+            message: 'Senha redefinida com sucesso! Você já pode fazer login.'
+        });
+
+    } catch (error) {
+        console.error('Erro ao redefinir senha:', error);
+        res.status(500).json({
+            message: 'Erro ao redefinir senha. Tente novamente.'
+        });
+    }
+};
+
 module.exports = {
     authUsuario,
     registerUsuario,
@@ -299,5 +415,7 @@ module.exports = {
     deleteUsuario,
     updateHeartbeat,
     setOffline,
-    getUsuariosAtivos
+    getUsuariosAtivos,
+    requestPasswordReset,
+    resetPassword
 };
