@@ -336,9 +336,22 @@ const DashboardPage = () => {
                     Usuários Ativos
                   </p>
                   {loadingUsers ? (
-                    <p className="text-sm font-medium text-muted-foreground">
-                      Carregando...
-                    </p>
+                    <div className="flex items-center gap-1">
+                      <div className="flex gap-1">
+                        <span
+                          className="h-1.5 w-1.5 bg-primary rounded-full animate-bounce"
+                          style={{ animationDelay: "0ms" }}
+                        ></span>
+                        <span
+                          className="h-1.5 w-1.5 bg-primary rounded-full animate-bounce"
+                          style={{ animationDelay: "150ms" }}
+                        ></span>
+                        <span
+                          className="h-1.5 w-1.5 bg-primary rounded-full animate-bounce"
+                          style={{ animationDelay: "300ms" }}
+                        ></span>
+                      </div>
+                    </div>
                   ) : (
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium text-foreground">
@@ -560,8 +573,24 @@ const DashboardPage = () => {
             {/* Lista de Usuários */}
             <div className="p-4 space-y-3">
               {loadingUsers ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  Carregando usuários...
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="flex gap-2 mb-4">
+                    <span
+                      className="h-3 w-3 bg-primary rounded-full animate-bounce"
+                      style={{ animationDelay: "0ms" }}
+                    ></span>
+                    <span
+                      className="h-3 w-3 bg-primary rounded-full animate-bounce"
+                      style={{ animationDelay: "150ms" }}
+                    ></span>
+                    <span
+                      className="h-3 w-3 bg-primary rounded-full animate-bounce"
+                      style={{ animationDelay: "300ms" }}
+                    ></span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Carregando usuários
+                  </p>
                 </div>
               ) : activeUsers.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
