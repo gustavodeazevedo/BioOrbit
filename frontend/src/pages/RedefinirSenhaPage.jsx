@@ -75,15 +75,15 @@ const RedefinirSenhaPage = () => {
   if (!tokenValid) {
     return (
       <div className="login-container">
-        <div className="login-logo">
-          <img
-            src="/images/bioorbit-logo.png"
-            alt="BioOrbit Logo"
-            className="logo-image"
-          />
-        </div>
-
         <div className="login-form">
+          <div className="login-logo">
+            <img
+              src="/images/bioorbit-logo.png"
+              alt="BioOrbit Logo"
+              className="logo-image"
+            />
+          </div>
+
           <h2 className="form-title">Link Inválido</h2>
           <div className="error-message">
             O link de redefinição de senha é inválido ou expirou.
@@ -100,15 +100,15 @@ const RedefinirSenhaPage = () => {
 
   return (
     <div className="login-container">
-      <div className="login-logo">
-        <img
-          src="/images/bioorbit-logo.png"
-          alt="BioOrbit Logo"
-          className="logo-image"
-        />
-      </div>
-
       <div className="login-form">
+        <div className="login-logo">
+          <img
+            src="/images/bioorbit-logo.png"
+            alt="BioOrbit Logo"
+            className="logo-image"
+          />
+        </div>
+
         <h2 className="form-title">Redefinir Senha</h2>
 
         {error && <div className="error-message">{error}</div>}
