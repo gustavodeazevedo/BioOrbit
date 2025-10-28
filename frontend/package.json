@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:analyze": "vite build --mode production && vite-bundle-visualizer",
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run",

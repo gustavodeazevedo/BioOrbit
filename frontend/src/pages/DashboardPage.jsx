@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import presenceService from "../services/presenceService";
+import { useIdleCallback } from "../hooks/useIdleCallback";
 import {
   Home,
   Users,
@@ -45,8 +46,8 @@ const DashboardPage = () => {
     "bg-teal-500",
   ];
 
-  // Carregar usuários ativos
-  const loadActiveUsers = async () => {
+  // Carregar usuários ativos com useCallback
+  const loadActiveUsers = useCallback(async () => {
     console.log("🔄 Iniciando carregamento de usuários ativos...");
     setLoadingUsers(true);
     try {
@@ -64,9 +65,9 @@ const DashboardPage = () => {
     } finally {
       setLoadingUsers(false);
     }
-  };
+  }, [user?._id]); // Apenas re-criar se o ID do usuário mudar
 
-  // Iniciar tracking de presença e WebSocket
+  // Iniciar tracking de presença e polling otimizado
   useEffect(() => {
     console.log("🚀 Dashboard montado, iniciando tracking de presença...");
     console.log("👤 Usuário atual:", user);
@@ -75,18 +76,44 @@ const DashboardPage = () => {
     presenceService.startTracking();
     loadActiveUsers();
 
-    // Atualizar via API a cada 30 segundos
-    const interval = setInterval(() => {
-      console.log("⏰ Atualizando usuários ativos via API (30s)");
-      loadActiveUsers();
-    }, 30000);
+    // Atualizar via API a cada 30 segundos usando idle time
+    let isActive = true;
+
+    const scheduleNextUpdate = () => {
+      if (!isActive) return;
+
+      // Usar requestIdleCallback se disponível para não bloquear interações
+      if ("requestIdleCallback" in window) {
+        window.requestIdleCallback(
+          () => {
+            if (isActive) {
+              console.log("⏰ Atualizando usuários ativos via API (idle time)");
+              loadActiveUsers();
+              setTimeout(scheduleNextUpdate, 30000);
+            }
+          },
+          { timeout: 32000 }
+        ); // Timeout de segurança
+      } else {
+        setTimeout(() => {
+          if (isActive) {
+            console.log("⏰ Atualizando usuários ativos via API (30s)");
+            loadActiveUsers();
+            scheduleNextUpdate();
+          }
+        }, 30000);
+      }
+    };
+
+    // Iniciar o agendamento
+    setTimeout(scheduleNextUpdate, 30000);
 
     return () => {
       console.log("🛑 Dashboard desmontado, parando tracking...");
+      isActive = false;
       presenceService.stopTracking();
-      clearInterval(interval);
     };
-  }, [user]);
+  }, [user, loadActiveUsers]);
 
   // Atualizar quando abrir o modal
   useEffect(() => {
@@ -120,22 +147,27 @@ const DashboardPage = () => {
     }
   };
 
-  const handleConfigClick = () => {
+  // Memoizar handleConfigClick
+  const handleConfigClick = useCallback(() => {
     setShowConfigToast(true);
     setTimeout(() => setShowConfigToast(false), 4000);
-  };
+  }, []);
 
-  const menuItems = [
-    { icon: Home, label: "Dashboard", active: true },
-    { icon: Users, label: "Clientes", active: false },
-    { icon: Award, label: "Certificados", active: false },
-    {
-      icon: Settings,
-      label: "Configurações",
-      active: false,
-      onClick: handleConfigClick,
-    },
-  ];
+  // Memoizar menuItems
+  const menuItems = useMemo(
+    () => [
+      { icon: Home, label: "Dashboard", active: true },
+      { icon: Users, label: "Clientes", active: false },
+      { icon: Award, label: "Certificados", active: false },
+      {
+        icon: Settings,
+        label: "Configurações",
+        active: false,
+        onClick: handleConfigClick,
+      },
+    ],
+    [handleConfigClick]
+  );
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">

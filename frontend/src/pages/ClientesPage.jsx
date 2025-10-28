@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { UserPlus, Search, Edit, Trash2, ArrowLeft } from "lucide-react";
 import { getClientes, deleteCliente } from "../services/clienteService";
 import { TableSkeleton } from "../components/SkeletonLoader";
 import useColdStartDetection from "../hooks/useColdStartDetection";
+import { useDebounce } from "../hooks/useDebounce";
 
 const ClientesPage = () => {
   const [clientes, setClientes] = useState([]);
@@ -12,6 +13,9 @@ const ClientesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(null);
   const navigate = useNavigate();
+
+  // Debounce search term para evitar re-renders excessivos
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   // Hook para detectar cold start
   const { isColdStart, startLoading, stopLoading } =
@@ -37,32 +41,45 @@ const ClientesPage = () => {
     }
   };
 
-  const handleEdit = (id) => {
-    navigate(`/clientes/editar/${id}`);
-  };
-
-  const handleDelete = async (id) => {
-    if (confirmDelete === id) {
-      try {
-        await deleteCliente(id);
-        setClientes(clientes.filter((cliente) => cliente._id !== id));
-        setConfirmDelete(null);
-      } catch (err) {
-        setError(err.message || "Erro ao excluir cliente");
-        console.error("Erro ao excluir cliente:", err);
-      }
-    } else {
-      setConfirmDelete(id);
-    }
-  };
-
-  const cancelDelete = () => {
-    setConfirmDelete(null);
-  };
-
-  const filteredClientes = clientes.filter((cliente) =>
-    cliente.nome.toLowerCase().includes(searchTerm.toLowerCase())
+  // Memoizar handlers para evitar re-criação em cada render
+  const handleEdit = useCallback(
+    (id) => {
+      navigate(`/clientes/editar/${id}`);
+    },
+    [navigate]
   );
+
+  const handleDelete = useCallback(
+    async (id) => {
+      if (confirmDelete === id) {
+        try {
+          await deleteCliente(id);
+          setClientes(clientes.filter((cliente) => cliente._id !== id));
+          setConfirmDelete(null);
+        } catch (err) {
+          setError(err.message || "Erro ao excluir cliente");
+          console.error("Erro ao excluir cliente:", err);
+        }
+      } else {
+        setConfirmDelete(id);
+      }
+    },
+    [confirmDelete, clientes]
+  );
+
+  const cancelDelete = useCallback(() => {
+    setConfirmDelete(null);
+  }, []);
+
+  // Memoizar filteredClientes usando o termo debounced
+  const filteredClientes = useMemo(() => {
+    if (!debouncedSearchTerm) return clientes;
+
+    const searchLower = debouncedSearchTerm.toLowerCase();
+    return clientes.filter((cliente) =>
+      cliente.nome.toLowerCase().includes(searchLower)
+    );
+  }, [clientes, debouncedSearchTerm]);
 
   return (
     <div className="p-6 max-w-6xl mx-auto bg-white rounded-lg shadow-md">
